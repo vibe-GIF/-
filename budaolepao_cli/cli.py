@@ -30,7 +30,7 @@ def main():
         print("  config       Show current config")
         print("  scan         Scan all drives for MuMu installation")
         print("  route        Set running route (lon,lat lon,lat ...)")
-        print("  map          Open map in browser with current route")
+        print("  map          Open Baidu Maps picker (right-click -> '添加标记' to get coords)")
         return
 
     root = Path(__file__).parent.parent
@@ -184,7 +184,6 @@ def _scan_mumu(root: Path):
 
 
 def _open_map(root: Path):
-    import json
     import webbrowser
 
     cfg_path = root / "poc" / "emulator_run" / "config.json"
@@ -197,13 +196,13 @@ def _open_map(root: Path):
         print("No route defined")
         return
 
-    # 用高德拾取器打开，显示第一个点
     first_lon, first_lat = points[0]
-    url = f"https://lbs.amap.com/tools/picker?center={first_lon},{first_lat}&showtools=true"
+    # 百度地图拾取器
+    url = f"https://map.baidu.com/pickplace?query={first_lat},{first_lon}"
 
-    print(f"Opening Amap picker with route ({len(points)} points)...")
+    print(f"Opening Baidu Maps picker ({len(points)} points)...")
     print(f"Route: {points}")
-    print(f"Tip: Right-click on map -> '这是哪儿' to get coordinates")
+    print("Tip: Right-click on map -> '添加标记' -> 标记上显示坐标")
     webbrowser.open(url)
 
 
