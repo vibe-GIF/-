@@ -197,12 +197,13 @@ def _open_map(root: Path):
         print("No route defined")
         return
 
-    # Build Google Maps URL with waypoints
-    waypoints = ";".join([f"{lat},{lon}" for lon, lat in points])
-    url = f"https://www.google.com/maps/dir/{waypoints}"
+    # 用高德拾取器打开，显示第一个点
+    first_lon, first_lat = points[0]
+    url = f"https://lbs.amap.com/tools/picker?center={first_lon},{first_lat}&showtools=true"
 
-    print(f"Opening map with {len(points)} points...")
+    print(f"Opening Amap picker with route ({len(points)} points)...")
     print(f"Route: {points}")
+    print(f"Tip: Right-click on map -> '这是哪儿' to get coordinates")
     webbrowser.open(url)
 
 
