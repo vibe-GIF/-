@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -29,6 +29,7 @@ def main():
         print("  capture      Capture button images")
         print("  config       Show current config")
         print("  scan         Scan all drives for MuMu installation")
+        print("  route        Set running route (lon,lat lon,lat ...)")
         return
 
     root = Path(__file__).parent.parent
@@ -65,6 +66,9 @@ def main():
 
     elif args.command == "scan":
         _scan_mumu(root)
+
+    elif args.command == "route":
+        _set_route(root, sys.argv[2:])
 
 
 def _show_config(root: Path):
@@ -173,3 +177,44 @@ def _scan_mumu(root: Path):
         print(f"Player: {player}")
     else:
         print("MuMu not found on any drive")
+
+
+def _set_route(root: Path, args: list):
+    import json
+
+    cfg_path = root / "poc" / "emulator_run" / "config.json"
+    if not cfg_path.exists():
+        cfg_path = root / "poc" / "emulator_run" / "config.example.json"
+    config = json.loads(cfg_path.read_text(encoding="utf-8"))
+
+    if not args:
+        print("Current route:")
+        for i, (lon, lat) in enumerate(config["walk_path"]):
+            print(f"  {i+1}. {lon}, {lat}")
+        print()
+        print("Usage: budaolepao route lon,lat lon,lat ...")
+        print("  e.g. budaolepao route 114.405,30.4695 114.4065,30.4705")
+        print("  Get coordinates from: https://map.baidu.com")
+        return
+
+    points = []
+    for arg in args:
+        try:
+            parts = arg.split(",")
+            lon, lat = float(parts[0]), float(parts[1])
+            points.append([lon, lat])
+        except (ValueError, IndexError):
+            print(f"Invalid: {arg} (expected lon,lat)")
+            return
+
+    if len(points) < 3:
+        print("Need at least 3 points")
+        return
+
+    config["walk_path"] = points
+    out_path = root / "poc" / "emulator_run" / "config.json"
+    out_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Route saved ({len(points)} points):")
+    for lon, lat in points:
+        print(f"  {lon}, {lat}")
+    print(f"Distance: {config.get('dist_limit_m', 3000)}m")
