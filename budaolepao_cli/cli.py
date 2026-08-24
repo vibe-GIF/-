@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -30,6 +30,7 @@ def main():
         print("  config       Show current config")
         print("  scan         Scan all drives for MuMu installation")
         print("  route        Set running route (lon,lat lon,lat ...)")
+        print("  map          Open map in browser with current route")
         return
 
     root = Path(__file__).parent.parent
@@ -69,6 +70,9 @@ def main():
 
     elif args.command == "route":
         _set_route(root, sys.argv[2:])
+
+    elif args.command == "map":
+        _open_map(root)
 
 
 def _show_config(root: Path):
@@ -177,6 +181,29 @@ def _scan_mumu(root: Path):
         print(f"Player: {player}")
     else:
         print("MuMu not found on any drive")
+
+
+def _open_map(root: Path):
+    import json
+    import webbrowser
+
+    cfg_path = root / "poc" / "emulator_run" / "config.json"
+    if not cfg_path.exists():
+        cfg_path = root / "poc" / "emulator_run" / "config.example.json"
+    config = json.loads(cfg_path.read_text(encoding="utf-8"))
+
+    points = config.get("walk_path", [])
+    if not points:
+        print("No route defined")
+        return
+
+    # Build Google Maps URL with waypoints
+    waypoints = ";".join([f"{lat},{lon}" for lon, lat in points])
+    url = f"https://www.google.com/maps/dir/{waypoints}"
+
+    print(f"Opening map with {len(points)} points...")
+    print(f"Route: {points}")
+    webbrowser.open(url)
 
 
 def _set_route(root: Path, args: list):
