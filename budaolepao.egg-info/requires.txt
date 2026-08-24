@@ -1,8 +1,0 @@
-numpy
-opencv-python
-prettytable
-fastapi
-uvicorn
-pydantic
-scikit-learn
-scipy

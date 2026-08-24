@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+screen.png
+config.json
+emu_path.json
+detection/.pytest_cache/
+eval/.pytest_cache/
+eval/eval_report.html
+detection/**/__pycache__/
+eval/**/__pycache__/
+poc/**/__pycache__/
+budaolepao_cli/__pycache__/
