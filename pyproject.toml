@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "budaolepao"
+version = "0.1.0"
+description = "步道乐跑 刷跑 + 反作弊检测"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "prettytable",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "scikit-learn",
+    "scipy",
+]
+
+[project.scripts]
+budaolepao = "budaolepao_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["budaolepao_cli*"]

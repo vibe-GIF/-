@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Budao Lepao - Eval Report</title>
+<style>
+  body { font-family: monospace; max-width: 900px; margin: 40px auto; padding: 20px; }
+  h1 { border-bottom: 2px solid #333; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background: #f0f0f0; }
+  .pass { color: green; font-weight: bold; }
+  .fail { color: red; font-weight: bold; }
+  .bar { display: inline-block; height: 20px; background: #4caf50; }
+  .bar-container { background: #e0e0e0; width: 200px; display: inline-block; }
+  .summary { display: flex; gap: 20px; }
+  .card { border: 1px solid #ddd; padding: 16px; border-radius: 8px; flex: 1; }
+  .card h3 { margin: 0 0 8px 0; }
+</style></head><body>
+<h1>Budao Lepao - Detection Evaluation Report</h1>
+<p>Generated: 2026-08-24 14:51:05</p>
+
+<h2>Summary</h2>
+<div class="summary">
+  <div class="card">
+    <h3>Best Threshold</h3>
+    <p style="font-size: 24px;">0.20</p>
+    <p>Recall: 100.0% / FPR: 0.0% / F1: 100.0%</p>
+  </div>
+  <div class="card">
+    <h3>Regression Test</h3>
+    <p style="font-size: 24px;" class="pass">
+      PASS
+    </p>
+    <p>Recall: 100.0% / FPR: 0.0%</p>
+  </div>
+  <div class="card">
+    <h3>Grid Search</h3>
+    <p>Best F1: 100.0%</p>
+    <p>Recall: 100.0% / FPR: 0.0%</p>
+  </div>
+</div>
+
+<h2>Threshold Scan</h2>
+<table>
+  <tr><th>Threshold</th><th>Recall</th><th>FPR</th><th>F1</th><th>TP</th><th>FP</th></tr>
+<tr><td>0.05</td><td>100.0%</td><td>100.0%</td><td>66.7%</td><td>50</td><td>50</td></tr>
+<tr><td>0.10</td><td>100.0%</td><td>100.0%</td><td>66.7%</td><td>50</td><td>50</td></tr>
+<tr><td>0.15</td><td>100.0%</td><td>100.0%</td><td>66.7%</td><td>50</td><td>50</td></tr>
+<tr><td>0.20</td><td>100.0%</td><td>0.0%</td><td>100.0%</td><td>50</td><td>0</td></tr>
+<tr><td>0.25</td><td>100.0%</td><td>0.0%</td><td>100.0%</td><td>50</td><td>0</td></tr>
+<tr><td>0.30</td><td>100.0%</td><td>0.0%</td><td>100.0%</td><td>50</td><td>0</td></tr>
+<tr><td>0.35</td><td>100.0%</td><td>0.0%</td><td>100.0%</td><td>50</td><td>0</td></tr>
+<tr><td>0.40</td><td>100.0%</td><td>0.0%</td><td>100.0%</td><td>50</td><td>0</td></tr>
+<tr><td>0.45</td><td>48.0%</td><td>0.0%</td><td>64.9%</td><td>24</td><td>0</td></tr>
+<tr><td>0.50</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.55</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.60</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.65</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.70</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.75</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.80</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.85</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+<tr><td>0.90</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0</td><td>0</td></tr>
+</table>
+
+<h2>Per-Type Recall (best threshold)</h2>
+<table>
+  <tr><th>Type</th><th>Recall</th></tr>
+<tr><td>attack_emulator</td><td><div class='bar-container'><div class='bar' style='width:200px'></div></div> 100%</td></tr>
+<tr><td>attack_enhanced</td><td><div class='bar-container'><div class='bar' style='width:200px'></div></div> 100%</td></tr>
+<tr><td>attack_script</td><td><div class='bar-container'><div class='bar' style='width:200px'></div></div> 100%</td></tr>
+<tr><td>normal</td><td><div class='bar-container'><div class='bar' style='width:0px'></div></div> 0%</td></tr>
+</table>
+
+<h2>Optimal Parameters (Grid Search)</h2>
+<table>
+  <tr><th>Parameter</th><th>Value</th></tr>
+<tr><td>accuracy_variance_min</td><td>0.0310</td></tr>
+<tr><td>max_instant_speed</td><td>12.0675</td></tr>
+<tr><td>max_acceleration</td><td>10.9668</td></tr>
+<tr><td>max_speed_variance</td><td>0.3627</td></tr>
+<tr><td>autocorr_threshold</td><td>0.4002</td></tr>
+<tr><td>speed_step_corr_min</td><td>0.4794</td></tr>
+</table>
+
+<h2>Regression Test</h2>
+<p>Status: <span class="pass">PASSED</span></p>
+<ul>
+<li>No issues found</li>
+</ul>
+</body></html>

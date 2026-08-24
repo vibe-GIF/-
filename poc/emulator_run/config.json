@@ -1,0 +1,28 @@
+{
+  "walk_path": [
+    [114.4050, 30.4695],
+    [114.4065, 30.4705],
+    [114.4080, 30.4708],
+    [114.4090, 30.4700],
+    [114.4095, 30.4685],
+    [114.4085, 30.4675],
+    [114.4070, 30.4670],
+    [114.4055, 30.4675],
+    [114.4045, 30.4685]
+  ],
+  "dist_limit_m": 3000,
+  "base_speed_mps": 4.0,
+  "speed_amp": 0.6,
+  "speed_cycle_sec": 25.0,
+  "jitter_radius_m": 2.0,
+  "ou_theta": 0.8,
+  "ou_sigma": 1.5,
+  "tick_base_sec": 0.4,
+  "tick_log_mu": -1.0,
+  "tick_log_sigma": 0.25,
+  "lateral_amp": 1.5,
+  "lateral_cycle_sec": 15.0,
+  "tap_delay_sec": 1.0,
+  "window_delay_sec": 15.0,
+  "instance_index": 0
+}
