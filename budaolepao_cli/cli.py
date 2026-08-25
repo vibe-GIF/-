@@ -30,8 +30,10 @@ def main():
         print("  config       Show current config")
         print("  scan         Scan all drives for MuMu installation")
         print("  route        Set running route (lon,lat lon,lat ...)")
-        print("  map          Auto coordinate picker (open Amap, click map, record coords)")
-        print("               用法: budaolepao map [次数]  (默认 3 次)")
+        print("  map          Auto coordinate picker (open Amap, auto click map)")
+        print("               用法: budaolepao map [次数] [模式] [地址]")
+        print("               模式: auto(默认) 或 manual")
+        print("               示例: budaolepao map 5  auto 武汉华夏理工学院")
         return
 
     root = Path(__file__).parent.parent
@@ -75,11 +77,14 @@ def main():
     elif args.command == "map":
         import subprocess
         script = root / "poc" / "emulator_run" / "picker.py"
-        count = sys.argv[2] if len(sys.argv) > 2 else "3"
-        subprocess.run(
-            [sys.executable, str(script), count],
-            cwd=str(root / "poc" / "emulator_run"),
-        )
+        args_list = [sys.executable, str(script)]
+        if len(sys.argv) > 2:
+            args_list.append(sys.argv[2])  # count
+        if len(sys.argv) > 3:
+            args_list.append(sys.argv[3])  # mode (auto/manual)
+        if len(sys.argv) > 4:
+            args_list.append(sys.argv[4])  # address
+        subprocess.run(args_list, cwd=str(root / "poc" / "emulator_run"))
 
 
 def _show_config(root: Path):

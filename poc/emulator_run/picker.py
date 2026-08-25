@@ -1,14 +1,14 @@
 """
-高德地图坐标拾取器 - 简化版
+高德地图坐标拾取器 - 全自动版
+
+自动打开浏览器，搜索地址，自动点击地图获取坐标，自动提取。
 
 用法：
-  budaolepao picker 3
+  budaolepao map 5          # 自动模式，获取 5 个坐标
+  budaolepao map 5 manual   # 手动模式，点击后按回车
 
-功能：
-  1. 打开高德拾取器
-  2. 你搜索地址、点击地图
-  3. 每次点击后按回车，自动记录坐标
-  4. 最后让你选择保留哪些坐标
+依赖：
+  pip install selenium webdriver-manager
 """
 
 import json
@@ -24,69 +24,80 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 try:
-    from PIL import Image, ImageGrab, ImageEnhance
-    HAS_PIL = True
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    HAS_SELENIUM = True
 except ImportError:
-    HAS_PIL = False
+    HAS_SELENIUM = False
 
 try:
-    import pytesseract
-    HAS_TESSERACT = True
+    from webdriver_manager.chrome import ChromeDriverManager
+    HAS_WDM = True
 except ImportError:
-    HAS_TESSERACT = False
+    HAS_WDM = False
 
 
-def open_picker():
-    """打开高德拾取器"""
-    url = "https://lbs.amap.com/tools/picker"
-    print(f"打开高德拾取器: {url}")
-    webbrowser.open(url)
-    time.sleep(3)
+def setup_driver():
+    """设置 Selenium WebDriver"""
+    if not HAS_SELENIUM:
+        return None
 
-
-def capture_coords() -> list:
-    """截图坐标获取结果区域并 OCR"""
-    if not HAS_PIL or not HAS_TESSERACT:
-        print("需要安装: pip install pytesseract Pillow")
-        print("手动复制坐标获取结果区域的坐标")
-        return []
+    options = Options()
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-notifications")
+    options.add_argument("--disable-popup-blocking")
 
     try:
-        screenshot = ImageGrab.grab()
-        width, height = screenshot.size
+        if HAS_WDM:
+            service = Service(ChromeDriverManager().install())
+        else:
+            service = Service(r"C:\Program Files\Google\Chrome\Application\chromedriver.exe")
 
-        # 裁剪坐标获取结果区域（右上角）
-        left = int(width * 0.62)
-        top = int(height * 0.18)
-        right = int(width * 0.92)
-        bottom = int(height * 0.24)
+        driver = webdriver.Chrome(service=service, options=options)
+        return driver
+    except Exception as e:
+        print(f"浏览器启动失败: {e}")
+        return None
 
-        cropped = screenshot.crop((left, top, right, bottom))
 
-        # 增强对比度
-        enhancer = ImageEnhance.Contrast(cropped)
-        cropped = enhancer.enhance(1.5)
+def get_current_coords(driver) -> list:
+    """从坐标获取结果区域提取坐标"""
+    try:
+        # 尝试多种选择器定位坐标输入框
+        selectors = [
+            'input[placeholder*="坐标"]',
+            '.picker-result input',
+            '#coord-result',
+            '.result-text',
+        ]
 
-        # OCR
-        text = pytesseract.image_to_string(
-            cropped, lang='eng', config='--psm 7'
-        )
-
-        # 解析坐标
-        coords = []
-        matches = re.findall(r'([\d.]+),([\d.]+)', text)
-        for match in matches:
+        for selector in selectors:
             try:
-                lon = float(match[0])
-                lat = float(match[1])
-                if 70 < lon < 140 and 15 < lat < 55:
-                    coords.append([lon, lat])
-            except ValueError:
+                element = driver.find_element(By.CSS_SELECTOR, selector)
+                text = element.get_attribute("value") or element.text
+                if text:
+                    # 解析坐标
+                    matches = re.findall(r'([\d.]+),([\d.]+)', text)
+                    coords = []
+                    for match in matches:
+                        try:
+                            lon = float(match[0])
+                            lat = float(match[1])
+                            if 70 < lon < 140 and 15 < lat < 55:
+                                coords.append([lon, lat])
+                        except ValueError:
+                            continue
+                    if coords:
+                        return coords
+            except Exception:
                 continue
 
-        return coords
-    except Exception as e:
-        print(f"截图/OCR 错误: {e}")
+        return []
+    except Exception:
         return []
 
 
@@ -128,46 +139,127 @@ def save_route(coords: list, config_path: Path):
         print(f"  {coord[0]:.6f}, {coord[1]:.6f}")
 
 
-def main():
-    config_path = Path(__file__).parent / "config.json"
-    if not config_path.exists():
-        config_path = Path(__file__).parent / "config.example.json"
+def auto_mode(driver, count: int, address: str = ""):
+    """自动模式：自动搜索、自动点击、自动提取"""
+    # 打开高德拾取器
+    url = "https://lbs.amap.com/tools/picker"
+    print(f"打开: {url}")
+    driver.get(url)
+    time.sleep(3)
 
-    count = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+    # 搜索地址
+    if address:
+        try:
+            search_input = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "search-input"))
+            )
+            search_input.clear()
+            search_input.send_keys(address)
 
-    print("=" * 50)
-    print("高德地图坐标拾取器")
-    print("=" * 50)
-    print(f"获取次数: {count}")
-    print()
-    print("操作流程:")
-    print("  1. 在地图中搜索地址")
-    print("  2. 点击地图获取坐标")
-    print("  3. 看到坐标后按回车记录")
-    print("  4. 重复 N 次")
-    print("  5. 选择保留哪些坐标")
-    print()
-
-    open_picker()
+            search_btn = driver.find_element(By.ID, "search-btn")
+            search_btn.click()
+            time.sleep(2)
+        except Exception as e:
+            print(f"搜索失败: {e}")
 
     all_coords = []
     for i in range(count):
-        print(f"[{i+1}/{count}] 点击地图后按回车记录坐标...")
-        input()
+        print(f"\n[{i+1}/{count}] 自动获取坐标...")
 
-        coords = capture_coords()
+        # 自动点击地图中心区域（需要调整坐标）
+        try:
+            # 点击地图中心
+            driver.execute_script("arguments[0].click();", 
+                driver.find_element(By.TAG_NAME, "div").find_element(By.CSS_SELECTOR, "[class*='map']"))
+            time.sleep(1)
+
+            # 提取坐标
+            coords = get_current_coords(driver)
+            if coords:
+                all_coords.extend(coords)
+                print(f"✓ 记录 {len(coords)} 个坐标: {coords}")
+            else:
+                print("✗ 未提取到坐标")
+        except Exception as e:
+            print(f"✗ 点击失败: {e}")
+
+        time.sleep(2)  # 等待下一次点击
+
+    return all_coords
+
+
+def manual_mode(driver, count: int):
+    """手动模式：用户点击地图，程序提取坐标"""
+    url = "https://lbs.amap.com/tools/picker"
+    driver.get(url)
+    time.sleep(3)
+
+    all_coords = []
+    for i in range(count):
+        print(f"\n[{i+1}/{count}] 请在地图中点击获取坐标...")
+        print("点击后按回车记录坐标...")
+
+        input()  # 等待用户操作
+
+        coords = get_current_coords(driver)
         if coords:
             all_coords.extend(coords)
             print(f"✓ 记录 {len(coords)} 个坐标: {coords}")
         else:
             print("✗ 未记录到坐标，请重试")
 
-    if not all_coords:
-        print("\n未获取到任何坐标")
+    return all_coords
+
+
+def main():
+    config_path = Path(__file__).parent / "config.json"
+    if not config_path.exists():
+        config_path = Path(__file__).parent / "config.example.json"
+
+    count = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+    mode = sys.argv[2] if len(sys.argv) > 2 else "auto"
+    address = sys.argv[3] if len(sys.argv) > 3 else "武汉华夏理工学院"
+
+    print("=" * 50)
+    print("高德地图坐标拾取器")
+    print("=" * 50)
+    print(f"获取次数: {count}")
+    print(f"模式: {mode}")
+    print(f"地址: {address}")
+    print()
+
+    if not HAS_SELENIUM:
+        print("需要安装:")
+        print("  pip install selenium webdriver-manager")
+        print()
+        print("或者手动操作:")
+        print("  1. 打开 https://lbs.amap.com/tools/picker")
+        print("  2. 搜索地址")
+        print("  3. 点击地图获取坐标")
+        print("  4. 复制坐标获取结果区域的坐标")
+        print("  5. 使用 budaolepao route 设置路线")
         return
 
-    selected = pick_coords(all_coords)
-    save_route(selected, config_path)
+    driver = setup_driver()
+    if not driver:
+        print("无法启动浏览器")
+        return
+
+    try:
+        if mode == "auto":
+            all_coords = auto_mode(driver, count, address)
+        else:
+            all_coords = manual_mode(driver, count)
+
+        if not all_coords:
+            print("\n未获取到任何坐标")
+            return
+
+        selected = pick_coords(all_coords)
+        save_route(selected, config_path)
+
+    finally:
+        driver.quit()
 
 
 if __name__ == "__main__":
