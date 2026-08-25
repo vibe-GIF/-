@@ -65,6 +65,12 @@ class Config:
     instance_index: int = 0
     face_check: bool = False
     face_photo: str = ""
+    auto_start_run: bool = True
+    # 900x1600 分辨率下的按钮坐标（开始乐跑 / 自由跑确认）
+    start_run_x: int = 450
+    start_run_y: int = 1090
+    free_run_x: int = 600
+    free_run_y: int = 985
 
 
 def load_config(path: str = "config.json") -> Config:
@@ -460,6 +466,9 @@ def run(cfg: Config):
     else:
         print(f"{CLR_A}No run app / WeChat found in installed packages{CLR_RST}")
 
+    # 自动点击进入跑步（开始乐跑 → 自由跑确认 → 等倒计时）
+    _auto_start_run(ui, cfg)
+
     # 定位到起点
     start_lon, start_lat = cfg.walk_path[0]
     mu.set_location(start_lon, start_lat)
@@ -589,6 +598,21 @@ def _detect_run_app(pkgs: set) -> Optional[str]:
         if any(k in low for k in _RUN_PKG_KEYWORDS):
             return pkg
     return None
+
+
+def _auto_start_run(ui: "UIController", cfg: Config):
+    """自动点击进入跑步：主页「开始乐跑」→ 弹「自由跑」确认 → 等 3-2-1 倒计时。"""
+    if not cfg.auto_start_run:
+        return
+    print(f"{CLR_C}[auto] tapping 开始乐跑...{CLR_RST}")
+    time.sleep(2)
+    ui.tap(int(cfg.start_run_x), int(cfg.start_run_y))
+    time.sleep(1.5)
+    print(f"{CLR_C}[auto] tapping 自由跑确认...{CLR_RST}")
+    ui.tap(int(cfg.free_run_x), int(cfg.free_run_y))
+    # 等 3-2-1 倒计时结束，进入跑步记录页
+    time.sleep(4)
+    print(f"{CLR_C}[auto] run started{CLR_RST}")
 
 
 def _try_inject_step_sensor(mu: MuMuController) -> bool:

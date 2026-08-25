@@ -70,6 +70,7 @@ def test_run_launches_run_app(tmp_path, monkeypatch):
         walk_path=[(114.4, 30.4), (114.5, 30.5), (114.6, 30.6)],
         dist_limit_m=0.001,      # 极小，让主循环第一轮就结束
         window_delay_sec=0,      # 避免真实 sleep
+        auto_start_run=False,    # 冒烟测试不点真按钮（避免 fake adb 报错）
     )
     main.run(cfg)
 
