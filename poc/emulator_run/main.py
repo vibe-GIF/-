@@ -471,8 +471,31 @@ def run(cfg: Config):
         print(tbl)
         print(f"  Steps: {step_count}  |  OU noise: ({dx:+.2f}, {dy:+.2f})m")
 
+        # 写入进度供 TUI 看板读取
+        try:
+            Path("run_status.json").write_text(json.dumps({
+                "elapsed": round(elapsed, 1),
+                "speed": round(speed, 2),
+                "total_dist": round(total_dist, 1),
+                "step_hz": round(step_hz, 2),
+                "frame": frame,
+                "step_count": step_count,
+                "noise": f"({dx:+.2f}, {dy:+.2f})",
+                "running": True,
+            }), encoding="utf-8")
+        except Exception:
+            pass
+
         if total_dist >= cfg.dist_limit_m:
             print(f"{CLR_A}Target distance reached.{CLR_RST}")
+            try:
+                Path("run_status.json").write_text(json.dumps({
+                    "running": False, "done": True,
+                    "total_dist": round(total_dist, 1),
+                    "elapsed": round(elapsed, 1),
+                }), encoding="utf-8")
+            except Exception:
+                pass
             break
 
 
