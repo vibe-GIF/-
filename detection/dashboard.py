@@ -85,12 +85,14 @@ def render_progress(data: dict) -> Panel:
 
 
 def render_check(scores: dict) -> Panel:
-    table = Table(box=None, expand=True, padding=(0, 1, 0, 0))
-    table.add_column("Check", style="grey58")
-    table.add_column("Score", justify="right", width=6)
-    table.add_column("", width=12)
+    table = Table(
+        box=None, expand=True, padding=(0, 1, 0, 0),
+        show_header=True,
+    )
+    table.add_column("Check", style="grey58", header_style="bold white")
+    table.add_column("Score", justify="right", width=6, header_style="bold white italic")
+    table.add_column("", width=12, no_wrap=True)
 
-    table.add_row("[grey58 italic]Check[/]", "[grey58 italic]Score[/]", "")
     for name, score in scores.items():
         color = risk_color(score)
         table.add_row(name, Text(f"{score:.2f}", style=color), block_bar(score))
