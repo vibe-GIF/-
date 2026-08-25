@@ -104,7 +104,7 @@ def main():
         import subprocess
         bat = root / "setup.bat"
         if bat.exists():
-            subprocess.run(["cmd", "/c", str(bat)])
+            subprocess.run(["cmd", "/c", str(bat)], cwd=str(root))
         else:
             print("setup.bat not found")
 
