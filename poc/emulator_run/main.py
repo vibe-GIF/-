@@ -66,11 +66,13 @@ class Config:
     face_check: bool = False
     face_photo: str = ""
     auto_start_run: bool = True
-    # 900x1600 分辨率下的按钮坐标（开始乐跑 / 自由跑确认）
-    start_run_x: int = 450
-    start_run_y: int = 1090
-    free_run_x: int = 600
-    free_run_y: int = 985
+    click_threshold: float = 0.75
+    # 图片识别模板（放 img/ 目录，由 option 9 采集）
+    tpl_begin: str = "begin_run.png"      # 开始乐跑
+    tpl_free: str = "free_run.png"        # 自由跑确认
+    tpl_pause: str = "pause_run.png"      # 长按暂停
+    tpl_end: str = "end_run.png"          # 结束
+    tpl_confirm_end: str = "confirm_end.png"  # 结束二次确认
 
 
 def load_config(path: str = "config.json") -> Config:
@@ -575,6 +577,11 @@ def run(cfg: Config):
                 }), encoding="utf-8")
             except Exception:
                 pass
+            # 跑满后自动结束（长按暂停 → 结束 → 确认结束）
+            try:
+                _auto_finish_run(ui, cfg)
+            except Exception as e:
+                print(f"{CLR_A}[auto] finish error: {e}{CLR_RST}")
             break
 
 
@@ -600,19 +607,35 @@ def _detect_run_app(pkgs: set) -> Optional[str]:
     return None
 
 
+def _click(ui, cfg, tpl, name, long_press=False):
+    """用图片识别（模板匹配）点击按钮；模板缺失/未识别时给出提示并返回 False。"""
+    ok = ui.click_icon(tpl, threshold=cfg.click_threshold, long_press=long_press)
+    print(f"[auto] {name}: {'found' if ok else 'not found (请用 option 9 采集按钮模板 img/' + tpl + ')'}")
+    return ok
+
+
 def _auto_start_run(ui: "UIController", cfg: Config):
     """自动点击进入跑步：主页「开始乐跑」→ 弹「自由跑」确认 → 等 3-2-1 倒计时。"""
     if not cfg.auto_start_run:
         return
-    print(f"{CLR_C}[auto] tapping 开始乐跑...{CLR_RST}")
     time.sleep(2)
-    ui.tap(int(cfg.start_run_x), int(cfg.start_run_y))
+    _click(ui, cfg, cfg.tpl_begin, "开始乐跑")
     time.sleep(1.5)
-    print(f"{CLR_C}[auto] tapping 自由跑确认...{CLR_RST}")
-    ui.tap(int(cfg.free_run_x), int(cfg.free_run_y))
-    # 等 3-2-1 倒计时结束，进入跑步记录页
+    _click(ui, cfg, cfg.tpl_free, "自由跑确认")
     time.sleep(4)
     print(f"{CLR_C}[auto] run started{CLR_RST}")
+
+
+def _auto_finish_run(ui: "UIController", cfg: Config):
+    """跑到里程后自动结束：长按暂停 → 结束 → 确认结束。"""
+    if not cfg.auto_start_run:
+        return
+    print(f"{CLR_C}[auto] finishing run...{CLR_RST}")
+    _click(ui, cfg, cfg.tpl_pause, "长按暂停", long_press=True)
+    time.sleep(1.5)
+    _click(ui, cfg, cfg.tpl_end, "结束")
+    time.sleep(1.5)
+    _click(ui, cfg, cfg.tpl_confirm_end, "确认结束")
 
 
 def _try_inject_step_sensor(mu: MuMuController) -> bool:
