@@ -27,6 +27,23 @@ class SensorConsistencyRule(BaseRule):
                 rule_name=self.name, passed=False, score=0.3,
                 detail="No or insufficient sensor data — possible sensor gap",
             )
+        # 步频信号：优先 step_rate(Hz)；缺省时用累计 step_count 差分估计，避免把累计值当步频
+        sorted_sensors = sorted(
+            [s for s in sensors if s.timestamp is not None], key=lambda s: s.timestamp
+        )
+        sensor_rate_by_ts = {}
+        prev_count, prev_t = None, None
+        for s in sorted_sensors:
+            if s.step_rate is not None:
+                sensor_rate_by_ts[s.timestamp] = float(s.step_rate)
+            elif s.step_count is not None and prev_count is not None and prev_t is not None:
+                dt = s.timestamp - prev_t
+                if dt > 0:
+                    sensor_rate_by_ts[s.timestamp] = max(0.0, (s.step_count - prev_count) / dt)
+            if s.step_count is not None:
+                prev_count = s.step_count
+                prev_t = s.timestamp
+
         gps_speeds = []
         step_rates = []
         for i in range(1, len(trace.gps_points)):
@@ -36,14 +53,14 @@ class SensorConsistencyRule(BaseRule):
                 continue
             dist = geo_dist_m(p0.lat, p0.lon, p1.lat, p1.lon)
             gps_speeds.append(dist / dt)
-            nearby = [
-                s for s in sensors
-                if abs(s.timestamp - p1.timestamp) < 0.5 and s.step_count is not None
+            nearby_rates = [
+                rate for ts, rate in sensor_rate_by_ts.items()
+                if abs(ts - p1.timestamp) < 0.5
             ]
-            if nearby:
-                step_rates.append(float(np.mean([s.step_count for s in nearby])))
+            if nearby_rates:
+                step_rates.append(float(np.mean(nearby_rates)))
             else:
-                step_rates.append(0)
+                step_rates.append(0.0)
 
         if len(gps_speeds) < 5 or len(step_rates) < 5:
             return RuleResult(

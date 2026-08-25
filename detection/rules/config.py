@@ -52,11 +52,13 @@ class EmulatorFingerprintConfig(RuleConfig):
 class TrajectorySimilarityConfig(RuleConfig):
     jaccard_threshold: float = 0.9
     grid_size: int = 100
+    state_ttl_sec: float = 21600.0  # 历史路线保留时长（默认 6h）
 
 
 @dataclass
 class MultiAccountConfig(RuleConfig):
     max_accounts_per_device: int = 3
+    state_ttl_sec: float = 21600.0  # 设备-账号关联保留时长（默认 6h，防跨会话误报）
 
 
 @dataclass

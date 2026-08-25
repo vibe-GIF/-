@@ -49,7 +49,7 @@ def sample_to_trace_request(sample: TraceSample) -> TraceRequest:
         ))
         sensors.append(SensorFrame(
             timestamp=t,
-            step_count=int(sample.step_rates[i]) if i < len(sample.step_rates) else 0,
+            step_rate=float(sample.step_rates[i]) if i < len(sample.step_rates) else None,
         ))
     return TraceRequest(
         trace_id=sample.trace_id,

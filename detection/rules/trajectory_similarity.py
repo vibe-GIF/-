@@ -1,4 +1,5 @@
 import math
+import time
 
 from server.models import RuleResult, TraceRequest
 from .base import BaseRule
@@ -8,7 +9,7 @@ from .config import TrajectorySimilarityConfig
 class TrajectorySimilarityRule(BaseRule):
     name = "trajectory_similarity"
 
-    _history: list = []
+    _history: list = []  # [(ts, grid_set)]
 
     def evaluate(
         self, trace: TraceRequest, config: TrajectorySimilarityConfig
@@ -25,9 +26,13 @@ class TrajectorySimilarityRule(BaseRule):
             row = int(p.lat * config.grid_size)
             current_grid.add((col, row))
 
+        now = time.time()
+        # TTL 衰减：丢弃过期的历史路线
+        self._history = [(ts, g) for ts, g in self._history if now - ts <= config.state_ttl_sec]
+
         if self._history:
             high_sim = 0.0
-            for prev_grid in self._history:
+            for _, prev_grid in self._history:
                 intersection = current_grid & prev_grid
                 union = current_grid | prev_grid
                 sim = len(intersection) / len(union) if union else 0
@@ -40,7 +45,7 @@ class TrajectorySimilarityRule(BaseRule):
                     "possible route reuse",
                 )
 
-        self._history.append(current_grid)
+        self._history.append((now, current_grid))
         if len(self._history) > 100:
             self._history = self._history[-50:]
 

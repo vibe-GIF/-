@@ -24,6 +24,7 @@ class SensorFrame(BaseModel):
     gyro_z: Optional[float] = None
     pressure: Optional[float] = None
     step_count: Optional[int] = None
+    step_rate: Optional[float] = None
 
 
 class TraceRequest(BaseModel):

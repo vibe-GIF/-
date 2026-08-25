@@ -186,7 +186,7 @@ def test_sensor_consistency_correlated(engine):
         points.append(make_point(lon, lat, ts=ts))
         sensors.append(SensorFrame(
             timestamp=ts,
-            step_count=int(2.0 + i * 0.1),
+            step_rate=float(2.0 + i * 0.1),
             accel_x=0.5, accel_y=0.3, accel_z=9.8,
         ))
     trace = make_trace(points, sensors=sensors)
