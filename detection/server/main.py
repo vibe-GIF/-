@@ -205,6 +205,7 @@ def streaming_feed(data: dict):
     return {
         "status": "ok",
         "result": result,
+        "pending": result is None,
     }
 
 

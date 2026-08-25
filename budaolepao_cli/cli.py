@@ -285,18 +285,20 @@ def _set_settings(root: Path, args: list):
         if args[i] == "--speed" and i + 1 < len(args):
             try:
                 speed = float(args[i + 1])
-                i += 2
-                continue
             except ValueError:
-                pass
+                print(f"Invalid speed: {args[i + 1]}")
+                return
+            i += 2
         elif args[i] == "--distance" and i + 1 < len(args):
             try:
                 distance = float(args[i + 1])
-                i += 2
-                continue
             except ValueError:
-                pass
-        i += 1
+                print(f"Invalid distance: {args[i + 1]}")
+                return
+            i += 2
+        else:
+            print(f"Unknown or incomplete option: {args[i]}")
+            return
 
     config["base_speed_mps"] = speed
     config["dist_limit_m"] = distance
