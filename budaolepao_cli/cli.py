@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "ocr", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "picker", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -31,7 +31,7 @@ def main():
         print("  scan         Scan all drives for MuMu installation")
         print("  route        Set running route (lon,lat lon,lat ...)")
         print("  map          Open Baidu Maps picker (right-click -> '添加标记' to get coords)")
-        print("  ocr          OCR coordinate picker (Amap popup + OCR)")
+        print("  picker       Auto coordinate picker (open Amap, click map, record coords)")
         return
 
     root = Path(__file__).parent.parent
@@ -79,6 +79,15 @@ def main():
         import subprocess
         script = root / "poc" / "emulator_run" / "ocr_picker.py"
         subprocess.run([sys.executable, str(script)], cwd=str(root / "poc" / "emulator_run"))
+
+    elif args.command == "picker":
+        import subprocess
+        script = root / "poc" / "emulator_run" / "picker.py"
+        count = sys.argv[2] if len(sys.argv) > 2 else "3"
+        subprocess.run(
+            [sys.executable, str(script), count],
+            cwd=str(root / "poc" / "emulator_run"),
+        )
 
 
 def _show_config(root: Path):
