@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -30,10 +30,10 @@ def main():
         print("  config       Show current config")
         print("  scan         Scan all drives for MuMu installation")
         print("  route        Set running route (lon,lat lon,lat ...)")
-        print("  map          Auto coordinate picker (open Amap, auto click map)")
-        print("               用法: budaolepao map [次数] [模式] [地址]")
-        print("               模式: auto(默认) 或 manual")
-        print("               示例: budaolepao map 5  auto 武汉华夏理工学院")
+        print("  map          Auto coordinate picker (open Amap, clipboard read)")
+        print("               用法: budaolepao map [次数]")
+        print("  settings     Set speed and distance")
+        print("               用法: budaolepao settings --speed <m/s> --distance <m>")
         return
 
     root = Path(__file__).parent.parent
@@ -85,6 +85,9 @@ def main():
         if len(sys.argv) > 4:
             args_list.append(sys.argv[4])  # address
         subprocess.run(args_list, cwd=str(root / "poc" / "emulator_run"))
+
+    elif args.command == "settings":
+        _set_settings(root, sys.argv[2:])
 
 
 def _show_config(root: Path):
@@ -234,3 +237,53 @@ def _set_route(root: Path, args: list):
     for lon, lat in points:
         print(f"  {lon}, {lat}")
     print(f"Distance: {config.get('dist_limit_m', 3000)}m")
+
+
+def _set_settings(root: Path, args: list):
+    import json
+
+    cfg_path = root / "poc" / "emulator_run" / "config.json"
+    if not cfg_path.exists():
+        cfg_path = root / "poc" / "emulator_run" / "config.example.json"
+    config = json.loads(cfg_path.read_text(encoding="utf-8"))
+
+    if not args:
+        # Show current settings
+        print("Current settings:")
+        print(f"  Speed:     {config.get('base_speed_mps', 4.0)} m/s")
+        print(f"  Distance:  {config.get('dist_limit_m', 3000)} m")
+        print(f"  Route:     {len(config.get('walk_path', []))} points")
+        print()
+        print("Usage: budaolepao settings --speed <m/s> --distance <m>")
+        print("  e.g. budaolepao settings --speed 5 --distance 5000")
+        return
+
+    # Parse flags
+    speed = config.get("base_speed_mps")
+    distance = config.get("dist_limit_m")
+    i = 0
+    while i < len(args):
+        if args[i] == "--speed" and i + 1 < len(args):
+            try:
+                speed = float(args[i + 1])
+                i += 2
+                continue
+            except ValueError:
+                pass
+        elif args[i] == "--distance" and i + 1 < len(args):
+            try:
+                distance = float(args[i + 1])
+                i += 2
+                continue
+            except ValueError:
+                pass
+        i += 1
+
+    config["base_speed_mps"] = speed
+    config["dist_limit_m"] = distance
+
+    out_path = root / "poc" / "emulator_run" / "config.json"
+    out_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Settings saved:")
+    print(f"  Speed:     {speed} m/s")
+    print(f"  Distance:  {distance} m")
