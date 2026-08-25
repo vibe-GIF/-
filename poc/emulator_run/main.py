@@ -546,7 +546,9 @@ def run(cfg: Config):
             break
 
 
-# 跑步软件包名关键词（只认明确“跑步”品牌，避免误匹配 QQ/其它应用）
+# 步道乐跑 App 精确包名（在模拟器里查得：com.lptiyu.tanke，乐跑体育/版本4.2.6）
+_RUN_APP_PACKAGE = "com.lptiyu.tanke"
+# 兜底：仅当精确包名缺失时，才用这些明确“跑步”品牌关键词匹配
 _RUN_PKG_KEYWORDS = (
     "lepao",      # 乐跑
     "budao",      # 步道
@@ -556,7 +558,9 @@ _RUN_PKG_KEYWORDS = (
 
 
 def _detect_run_app(pkgs: set) -> Optional[str]:
-    """按包名关键词在已安装应用中识别跑步软件。"""
+    """识别跑步软件：优先精确命中 com.lptiyu.tanke，否则按品牌关键词兜底。"""
+    if _RUN_APP_PACKAGE in pkgs:
+        return _RUN_APP_PACKAGE
     for pkg in pkgs:
         low = (pkg or "").lower()
         if any(k in low for k in _RUN_PKG_KEYWORDS):
