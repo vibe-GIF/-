@@ -546,10 +546,12 @@ def run(cfg: Config):
             break
 
 
-# 跑步软件包名关键词（用于“只识别跑步软件”）
+# 跑步软件包名关键词（只认明确“跑步”品牌，避免误匹配 QQ/其它应用）
 _RUN_PKG_KEYWORDS = (
-    "lepao", "budao", "pao", "sport", "run",
-    "yuedong", "schoolrun", "qinggong", "jian",
+    "lepao",      # 乐跑
+    "budao",      # 步道
+    "qinggong",   # 轻工(轻工大)
+    "schoolrun",  # 校园跑
 )
 
 
