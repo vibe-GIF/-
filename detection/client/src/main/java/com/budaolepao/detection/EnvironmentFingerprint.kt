@@ -101,7 +101,7 @@ internal object EnvironmentFingerprint {
         val isRooted = checkRoot()
         val hasXposed = checkXposed()
         val hasFrida = checkFrida()
-        val isMonkeyRunning = checkMonkey()
+        val isMonkeyRunning = runningProcesses.any { it.contains("monkey", ignoreCase = true) }
         val hasDebugApp = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
         val envProof = if (isEmulator) null else generateEnvProof()
@@ -135,15 +135,25 @@ internal object EnvironmentFingerprint {
     }
 
     private fun getRunningProcesses(): List<String> {
-        return try {
-            val procFile = File("/proc/self/status")
-            if (procFile.exists()) {
-                val lines = procFile.readLines()
-                lines.filter { it.startsWith("Name:") || it.startsWith("Groups:") }
-            } else emptyList()
+        // 枚举 /proc/<pid> 读取 comm / cmdline，覆盖其它进程（模拟器/宿主进程）
+        val result = mutableListOf<String>()
+        try {
+            val entries = File("/proc").listFiles() ?: return emptyList()
+            for (entry in entries) {
+                if (!entry.name.all { it.isDigit() }) continue
+                val comm = try {
+                    File(entry, "comm").readText().trim()
+                } catch (_: Exception) { "" }
+                if (comm.isNotEmpty()) result.add(comm)
+                val cmdline = try {
+                    File(entry, "cmdline").readText().substringBefore('\u0000').trim()
+                } catch (_: Exception) { "" }
+                if (cmdline.isNotEmpty()) result.add(cmdline)
+            }
         } catch (_: Exception) {
-            emptyList()
+            return emptyList()
         }
+        return result.distinct()
     }
 
     private fun checkRoot(): Boolean {
@@ -178,17 +188,6 @@ internal object EnvironmentFingerprint {
                 "/data/local/tmp/re.frida.server",
             )
             fridaFiles.any { File(it).exists() }
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun checkMonkey(): Boolean {
-        return try {
-            val cls = Class.forName("android.app.ActivityManager")
-            val method = cls.getDeclaredMethod("getCurrentUser")
-            method.isAccessible = true
-            false
         } catch (_: Exception) {
             false
         }
