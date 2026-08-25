@@ -67,12 +67,12 @@ class Config:
     face_photo: str = ""
     auto_start_run: bool = True
     click_threshold: float = 0.75
-    # 图片识别模板（放 img/ 目录，由 option 9 采集）
-    tpl_begin: str = "begin_run.png"      # 开始乐跑
-    tpl_free: str = "free_run.png"        # 自由跑确认
-    tpl_pause: str = "pause_run.png"      # 长按暂停
-    tpl_end: str = "end_run.png"          # 结束
-    tpl_confirm_end: str = "confirm_end.png"  # 结束二次确认
+    # 图片识别模板（放 img/ 目录，由 option 9 采集；点击时相对 cwd=poc/emulator_run）
+    tpl_begin: str = "img/begin_run.png"      # 开始乐跑
+    tpl_free: str = "img/free_run.png"        # 自由跑确认
+    tpl_pause: str = "img/pause_run.png"      # 长按暂停
+    tpl_end: str = "img/end_run.png"          # 结束
+    tpl_confirm_end: str = "img/confirm_end.png"  # 结束二次确认
 
 
 def load_config(path: str = "config.json") -> Config:
