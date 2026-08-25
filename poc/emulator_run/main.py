@@ -62,6 +62,8 @@ class Config:
     tap_delay_sec: float = 1.0
     window_delay_sec: float = 15.0
     instance_index: int = 0
+    face_check: bool = False
+    face_photo: str = ""
 
 
 def load_config(path: str = "config.json") -> Config:
@@ -380,6 +382,13 @@ def run(cfg: Config):
 
     # 尝试注入步频传感器（通过 ADB 模拟传感器事件）
     inject_step_sensor = _try_inject_step_sensor(mu)
+
+    # 人脸抓拍提醒
+    if cfg.face_check:
+        print(f"{CLR_A}!! 人脸抓拍已开启 !!{CLR_RST}")
+        print(f"{CLR_P}确保虚拟摄像头(OBS)正显示你的注册人脸，否则本次无效{CLR_RST}")
+        if cfg.face_photo:
+            print(f"{CLR_C}人脸照片: {cfg.face_photo}{CLR_RST}")
 
     ui = UIController(mu.adb, mu.adb_addr)
 

@@ -24,5 +24,7 @@
   "lateral_cycle_sec": 15.0,
   "tap_delay_sec": 1.0,
   "window_delay_sec": 15.0,
-  "instance_index": 0
+  "instance_index": 0,
+  "face_check": true,
+  "face_photo": ""
 }
