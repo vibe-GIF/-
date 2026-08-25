@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "picker", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -30,8 +30,8 @@ def main():
         print("  config       Show current config")
         print("  scan         Scan all drives for MuMu installation")
         print("  route        Set running route (lon,lat lon,lat ...)")
-        print("  map          Open Baidu Maps picker (right-click -> '添加标记' to get coords)")
-        print("  picker       Auto coordinate picker (open Amap, click map, record coords)")
+        print("  map          Auto coordinate picker (open Amap, click map, record coords)")
+        print("               用法: budaolepao map [次数]  (默认 3 次)")
         return
 
     root = Path(__file__).parent.parent
@@ -73,14 +73,6 @@ def main():
         _set_route(root, sys.argv[2:])
 
     elif args.command == "map":
-        _open_map(root)
-
-    elif args.command == "ocr":
-        import subprocess
-        script = root / "poc" / "emulator_run" / "ocr_picker.py"
-        subprocess.run([sys.executable, str(script)], cwd=str(root / "poc" / "emulator_run"))
-
-    elif args.command == "picker":
         import subprocess
         script = root / "poc" / "emulator_run" / "picker.py"
         count = sys.argv[2] if len(sys.argv) > 2 else "3"
@@ -196,29 +188,6 @@ def _scan_mumu(root: Path):
         print(f"Player: {player}")
     else:
         print("MuMu not found on any drive")
-
-
-def _open_map(root: Path):
-    import webbrowser
-
-    cfg_path = root / "poc" / "emulator_run" / "config.json"
-    if not cfg_path.exists():
-        cfg_path = root / "poc" / "emulator_run" / "config.example.json"
-    config = json.loads(cfg_path.read_text(encoding="utf-8"))
-
-    points = config.get("walk_path", [])
-    if not points:
-        print("No route defined")
-        return
-
-    first_lon, first_lat = points[0]
-    # 百度地图拾取器
-    url = f"https://map.baidu.com/pickplace?query={first_lat},{first_lon}"
-
-    print(f"Opening Baidu Maps picker ({len(points)} points)...")
-    print(f"Route: {points}")
-    print("Tip: Right-click on map -> '添加标记' -> 标记上显示坐标")
-    webbrowser.open(url)
 
 
 def _set_route(root: Path, args: list):
