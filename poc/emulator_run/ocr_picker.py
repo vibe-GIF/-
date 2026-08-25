@@ -26,23 +26,22 @@ def open_amap_picker(center_lon: float = 114.407, center_lat: float = 30.469):
 
 
 def parse_coords(text: str) -> list:
-    """解析坐标文本"""
+    """解析坐标文本。按取值范围自动识别经度(70-140)/纬度(15-55)，不依赖粘贴顺序。"""
+    import re
+    nums = re.findall(r'[\d.]+', text)
     coords = []
-    lines = text.strip().split('\n')
-    for line in lines:
-        line = line.strip()
-        # 匹配 "纬度: 30.4695" 或 "纬度:30.4695"
-        if '纬度' in line or 'lat' in line.lower():
-            # 提取数字
-            import re
-            numbers = re.findall(r'[\d.]+', line)
-            if len(numbers) >= 2:
-                try:
-                    lat = float(numbers[0])
-                    lon = float(numbers[1])
-                    coords.append([lon, lat])
-                except ValueError:
-                    continue
+    i = 0
+    while i + 1 < len(nums):
+        try:
+            a, b = float(nums[i]), float(nums[i + 1])
+        except ValueError:
+            i += 1
+            continue
+        if 15 <= a <= 55 and 70 <= b <= 140:
+            coords.append([b, a])  # a=纬度 b=经度
+        elif 15 <= b <= 55 and 70 <= a <= 140:
+            coords.append([a, b])  # a=经度 b=纬度
+        i += 2
     return coords
 
 

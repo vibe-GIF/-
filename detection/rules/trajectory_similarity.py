@@ -1,3 +1,5 @@
+import math
+
 from server.models import RuleResult, TraceRequest
 from .base import BaseRule
 from .config import TrajectorySimilarityConfig
@@ -11,9 +13,15 @@ class TrajectorySimilarityRule(BaseRule):
     def evaluate(
         self, trace: TraceRequest, config: TrajectorySimilarityConfig
     ) -> RuleResult:
+        if not trace.gps_points:
+            return RuleResult(
+                rule_name=self.name, passed=True, score=0.0,
+                detail="No GPS points", applicable=False,
+            )
+        # 经度按纬度缩放，保证网格在物理空间上近似均匀
         current_grid = set()
         for p in trace.gps_points:
-            col = int(p.lon * config.grid_size)
+            col = int(p.lon * config.grid_size * math.cos(math.radians(p.lat)))
             row = int(p.lat * config.grid_size)
             current_grid.add((col, row))
 
