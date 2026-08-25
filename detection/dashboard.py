@@ -34,16 +34,16 @@ from server.models import GPSPoint
 console = Console()
 
 
-# 配色方案 — 暗色主题，去掉蓝色
+# 配色方案 — 纯黑白
 C = {
     "bg": "black",
     "fg": "white",
-    "accent": "bright_green",
-    "warn": "bright_yellow",
-    "alert": "bright_red",
-    "info": "bright_cyan",
-    "dim": "bright_black",
-    "header_bg": "bright_black",
+    "accent": "white",
+    "warn": "white",
+    "alert": "white",
+    "info": "white",
+    "dim": "white",
+    "header_bg": "black",
 }
 
 
