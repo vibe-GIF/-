@@ -396,6 +396,10 @@ def run(cfg: Config):
 
     # 尝试注入步频传感器（通过 ADB 模拟传感器事件）
     inject_step_sensor = _try_inject_step_sensor(mu)
+    if inject_step_sensor:
+        print(f"{CLR_C}Step sensor injection channel available{CLR_RST}")
+    else:
+        print(f"{CLR_P}Step sensor injection unavailable (expected on most devices){CLR_RST}")
 
     # 人脸抓拍提醒
     if cfg.face_check:
@@ -523,17 +527,23 @@ def run(cfg: Config):
 
 
 def _try_inject_step_sensor(mu: MuMuController) -> bool:
-    """尝试建立步频传感器注入通道。返回是否成功。"""
+    """检测是否具备可注入的步频通道：sensorservice 可达 + settings 可写回读。"""
     try:
         # Android shell 用 grep 而非 Windows 的 findstr；空输出视为不可用
         out = mu.adb_shell("dumpsys sensorservice 2>&1 | grep -i sensor")
-        return bool(out and out.strip())
+        if not (out and out.strip()):
+            return False
+        # 验证 settings 通道真正可写回读（注意：这仍不保证 APP 会读该 key）
+        test_val = int(time.time())
+        mu.adb_shell(f"settings put global step_counter {test_val}")
+        read = mu.adb_shell("settings get global step_counter")
+        return read is not None and read.strip() == str(test_val)
     except Exception:
         return False
 
 
 def _inject_step_count(mu: MuMuController, count: int):
-    """通过 ADB 写入步数到系统设置（Google Fit 兼容）。"""
+    """通过 ADB 写入步数到系统设置。大多数 APP 不读此 key，主要用于演示传感器缺口。"""
     mu.adb_shell(f"settings put global step_counter {count}")
 
 
