@@ -100,8 +100,15 @@ def find_emu_dir() -> Tuple[Path, Path]:
             data = json.loads(cfg.read_text(encoding="utf-8"))
             mgr_dir = Path(data["emu_dir"])
             if mgr_dir.joinpath("MuMuManager.exe").is_file():
-                player = Path(data.get("player_path", str(mgr_dir / "MuMuPlayer.exe")))
-                return mgr_dir, player
+                player = Path(data.get("player_path", "")) if data.get("player_path") else None
+                if not player or not player.is_file():
+                    player = _find_player(mgr_dir)
+                if player:
+                    cfg.write_text(json.dumps({
+                        "emu_dir": str(mgr_dir),
+                        "player_path": str(player),
+                    }), encoding="utf-8")
+                    return mgr_dir, player
         except Exception:
             pass
     result = _scan_common_paths() or _scan_all_drives()
