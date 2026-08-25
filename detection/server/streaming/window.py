@@ -55,6 +55,7 @@ class StreamingDetector:
         self._warnings: List[dict] = []
         self._session_id: str = ""
         self._account_id: str = ""
+        self._created_at: float = time.time()
 
     def start_session(self, session_id: str, account_id: str = ""):
         self._session_id = session_id
@@ -147,6 +148,9 @@ class SessionManager:
 
     def cleanup(self, max_age_sec: float = 300):
         now = time.time()
-        stale = [sid for sid in self._sessions if hasattr(self._sessions[sid], "_created_at")]
+        stale = [
+            sid for sid, det in self._sessions.items()
+            if now - getattr(det, "_created_at", now) > max_age_sec
+        ]
         for sid in stale:
             self.remove(sid)

@@ -197,7 +197,11 @@ def meter_to_deg(lat: float, dx: float, dy: float) -> Tuple[float, float]:
 
 
 def geo_dist_m(lat1, lon1, lat2, lon2) -> float:
-    return math.hypot(lat2 - lat1, lon2 - lon1) * 111_320
+    """球面近似距离：经度方向需按纬度缩放 cos(lat)。"""
+    avg_lat = math.radians((lat1 + lat2) / 2.0)
+    d_lat = (lat2 - lat1) * 111_320
+    d_lon = (lon2 - lon1) * 111_320 * math.cos(avg_lat)
+    return math.hypot(d_lat, d_lon)
 
 
 # ============================================================
@@ -521,9 +525,9 @@ def run(cfg: Config):
 def _try_inject_step_sensor(mu: MuMuController) -> bool:
     """尝试建立步频传感器注入通道。返回是否成功。"""
     try:
-        # 检查是否能访问 sensorservice
-        out = mu.adb_shell("dumpsys sensorservice 2>&1 | findstr /i sensor")
-        return out is not None
+        # Android shell 用 grep 而非 Windows 的 findstr；空输出视为不可用
+        out = mu.adb_shell("dumpsys sensorservice 2>&1 | grep -i sensor")
+        return bool(out and out.strip())
     except Exception:
         return False
 

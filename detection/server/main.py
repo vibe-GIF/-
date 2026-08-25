@@ -200,10 +200,7 @@ def streaming_feed(data: dict):
     det = session_manager.get_or_create(session_id)
     result = det.feed(point)
     if result:
-        level = progressive_scorer.evaluate(
-            [w["window_risk"] for w in result.get("_history", [])]
-            if False else list(det._scores)
-        )
+        level = progressive_scorer.evaluate(list(det._scores))
         result["progressive_level"] = level
     return {
         "status": "ok",
