@@ -301,10 +301,27 @@ class MuMuController:
             return None
 
     def start_player(self):
+        # 优先用 MuMuManager 直接启动：主程序 + 指定实例（比 Popen 启动器更可靠）
+        try:
+            self.run(["main", "launch"], check=False, timeout=15)
+        except Exception:
+            pass
+        try:
+            self.run(["control", "-v", str(self.instance), "launch"], check=False, timeout=15)
+        except Exception:
+            pass
+        # 兜底：启动器仍在则再拉起
         if self.player.is_file():
             subprocess.Popen([str(self.player)])
         else:
-            print(f"{CLR_P}MuMuPlayer not found at {self.player}, assuming already running{CLR_RST}")
+            print(f"{CLR_P}MuMuPlayer not found, assuming already running{CLR_RST}")
+
+    def launch_instance(self):
+        """重试启动指定实例（用于等待超时后自动恢复）。"""
+        try:
+            self.run(["control", "-v", str(self.instance), "launch"], check=False, timeout=15)
+        except Exception:
+            pass
 
     def adb_shell(self, cmd: str) -> Optional[str]:
         if not self.adb_addr:
@@ -389,23 +406,27 @@ def run(cfg: Config):
     mu = MuMuController(emu_dir, player_path, cfg)
     gps = GPSSimulator(cfg)
 
-    # 启动模拟器
+    # 启动模拟器（一键拉起 MuMu）
     mu.start_player()
     print(f"{CLR_P}Waiting for MuMu to start...{CLR_RST}")
-    for _ in range(60):
-        pkgs = mu.installed_pkgs()
-        if pkgs:
+    # 用 ADB 就绪作为探测；等不齐自动重试启动实例一次，避免卡在“让你手动开”
+    ready = False
+    for attempt in range(2):
+        for _ in range(45):
+            if mu.adb_connect():
+                ready = True
+                break
+            time.sleep(2)
+        if ready:
             break
-        time.sleep(2)
-    else:
+        print(f"{CLR_P}MuMu not ready yet, retrying launch...{CLR_RST}")
+        mu.launch_instance()
+
+    if not ready:
         print(f"{CLR_A}Timed out waiting for MuMu{CLR_RST}")
-        print(f"{CLR_P}MuMu 未响应。请先手动双击桌面图标打开 MuMu，等它完全启动后再运行本命令。{CLR_RST}")
+        print(f"{CLR_P}MuMu 仍未就绪。若 MuMu 窗口已打开但无响应，请手动重启后重试。{CLR_RST}")
         return
 
-    # ADB 连接
-    if not mu.adb_connect():
-        print(f"{CLR_A}ADB connection failed{CLR_RST}")
-        return
     print(f"{CLR_C}ADB connected: {mu.adb_addr}{CLR_RST}")
 
     # 尝试注入步频传感器（通过 ADB 模拟传感器事件）
