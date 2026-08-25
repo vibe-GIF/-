@@ -445,6 +445,9 @@ def run(cfg: Config):
 
     ui = UIController(mu.adb, mu.adb_addr)
 
+    # 取已安装应用列表（ADB 就绪后才有意义）
+    pkgs = mu.installed_pkgs()
+
     # 启动跑步软件：优先按包名关键词识别“跑步类”App，找不到再回退微信小程序通道
     run_pkg = _detect_run_app(pkgs)
     if run_pkg:
