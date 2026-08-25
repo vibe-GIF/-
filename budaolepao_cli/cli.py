@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "dashboard", "setup", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "dashboard", "setup", "panel", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -36,8 +36,14 @@ def main():
         print("  dashboard    TUI detection dashboard (real-time)")
         print("               用法: budaolepao dashboard [--demo]")
         print("  setup        Install budaolepao (pip install -e .)")
+        print("  panel        TUI 控制中心菜单（包含所有命令）")
         print()
         print("兼容别名: route / settings / map = config 的子动作")
+        return
+
+    if args.command == "panel":
+        from .panel import main as panel_main
+        panel_main()
         return
 
     root = Path(__file__).parent.parent
