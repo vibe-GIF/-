@@ -12,6 +12,8 @@ from .emulator_fingerprint import EmulatorFingerprintRule
 from .trajectory_similarity import TrajectorySimilarityRule
 from .multi_account import MultiAccountRule
 from .request_integrity import RequestIntegrityRule
+from .zone_enforcement import ZoneEnforcementRule
+from .checkpoint import CheckpointRule
 
 
 class RuleEngine:
@@ -31,6 +33,8 @@ class RuleEngine:
             TrajectorySimilarityRule,
             MultiAccountRule,
             RequestIntegrityRule,
+            ZoneEnforcementRule,
+            CheckpointRule,
         ]
         for cls in rule_classes:
             rule = cls()

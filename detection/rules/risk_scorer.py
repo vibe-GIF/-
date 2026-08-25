@@ -12,6 +12,8 @@ class RiskScorer:
         total = 0.0
         weight_sum = 0.0
         for r in results:
+            if not r.applicable:
+                continue
             cfg = getattr(self.config, r.rule_name, None)
             weight = cfg.weight if cfg else 1.0
             total += r.score * weight

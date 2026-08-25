@@ -65,6 +65,19 @@ class RequestIntegrityConfig(RuleConfig):
 
 
 @dataclass
+class ZoneEnforcementConfig(RuleConfig):
+    zone_bounds: tuple = ()
+    max_outside_ratio: float = 0.1
+
+
+@dataclass
+class CheckpointConfig(RuleConfig):
+    checkpoints: tuple = ()
+    checkpoint_radius_m: float = 30.0
+    min_checkpoints: int = 1
+
+
+@dataclass
 class DetectionConfig:
     mock_detection: MockDetectionConfig = field(
         default_factory=MockDetectionConfig
@@ -92,6 +105,12 @@ class DetectionConfig:
     )
     request_integrity: RequestIntegrityConfig = field(
         default_factory=RequestIntegrityConfig
+    )
+    zone_enforcement: ZoneEnforcementConfig = field(
+        default_factory=ZoneEnforcementConfig
+    )
+    checkpoint: CheckpointConfig = field(
+        default_factory=CheckpointConfig
     )
 
     risk_thresholds: Dict[str, float] = field(

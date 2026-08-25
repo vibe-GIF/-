@@ -40,6 +40,7 @@ class RuleResult(BaseModel):
     passed: bool
     score: float
     detail: str
+    applicable: bool = True
 
 
 class DetectionResponse(BaseModel):
