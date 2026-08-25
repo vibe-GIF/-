@@ -424,12 +424,18 @@ def run(cfg: Config):
 
     ui = UIController(mu.adb, mu.adb_addr)
 
-    # 启动跑步应用（尝试常见包名）
-    run_pkgs = ["com.tencent.wework", "com.tencent.mm"]
-    for pkg in run_pkgs:
-        if pkg in pkgs:
-            mu.launch_app(pkg)
-            time.sleep(cfg.window_delay_sec)
+    # 启动跑步软件：优先按包名关键词识别“跑步类”App，找不到再回退微信小程序通道
+    run_pkg = _detect_run_app(pkgs)
+    if run_pkg:
+        mu.launch_app(run_pkg)
+        print(f"{CLR_C}Launched run app: {run_pkg}{CLR_RST}")
+        time.sleep(cfg.window_delay_sec)
+    elif any(p in pkgs for p in ["com.tencent.mm", "com.tencent.wework"]):
+        mu.launch_app("com.tencent.mm")
+        print(f"{CLR_P}No standalone run app found; using WeChat mini-program channel{CLR_RST}")
+        time.sleep(cfg.window_delay_sec)
+    else:
+        print(f"{CLR_A}No run app / WeChat found in installed packages{CLR_RST}")
 
     # 定位到起点
     start_lon, start_lat = cfg.walk_path[0]
@@ -538,6 +544,22 @@ def run(cfg: Config):
             except Exception:
                 pass
             break
+
+
+# 跑步软件包名关键词（用于“只识别跑步软件”）
+_RUN_PKG_KEYWORDS = (
+    "lepao", "budao", "pao", "sport", "run",
+    "yuedong", "schoolrun", "qinggong", "jian",
+)
+
+
+def _detect_run_app(pkgs: set) -> Optional[str]:
+    """按包名关键词在已安装应用中识别跑步软件。"""
+    for pkg in pkgs:
+        low = (pkg or "").lower()
+        if any(k in low for k in _RUN_PKG_KEYWORDS):
+            return pkg
+    return None
 
 
 def _try_inject_step_sensor(mu: MuMuController) -> bool:
