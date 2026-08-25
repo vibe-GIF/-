@@ -229,7 +229,14 @@ class DetectionDashboard:
             "Challenge": 0.05,
         }
 
-        with Live(layout, console=console, refresh_per_second=6, screen=True):
+        console.clear()
+        with Live(
+            layout,
+            console=console,
+            refresh_per_second=6,
+            screen=True,
+            auto_refresh=True,
+        ):
             while not self._stop.is_set():
                 if not self.demo:
                     self.read_run_status()
@@ -287,6 +294,8 @@ class DetectionDashboard:
                     len(self._results),
                 ))
                 time.sleep(0.15)
+
+        console.clear()
 
 
 def main():
