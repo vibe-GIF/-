@@ -14,8 +14,13 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "pydantic",
+    "rich",
+    "pyperclip",
     "scikit-learn",
     "scipy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
 ]
 
 [project.scripts]

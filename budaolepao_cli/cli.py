@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "dashboard", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "dashboard", "setup", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -36,6 +36,7 @@ def main():
         print("               用法: budaolepao settings --speed <m/s> --distance <m>")
         print("  dashboard    TUI detection dashboard (real-time)")
         print("               用法: budaolepao dashboard [--demo]")
+        print("  setup        One-click install (run setup.bat)")
         return
 
     root = Path(__file__).parent.parent
@@ -98,6 +99,14 @@ def main():
         if "--demo" in sys.argv:
             cmd.append("--demo")
         subprocess.run(cmd, cwd=str(root / "detection"))
+
+    elif args.command == "setup":
+        import subprocess
+        bat = root / "setup.bat"
+        if bat.exists():
+            subprocess.run(["cmd", "/c", str(bat)])
+        else:
+            print("setup.bat not found")
 
 
 def _show_config(root: Path):

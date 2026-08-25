@@ -24,7 +24,8 @@ from rich.box import SQUARE
 from integrated.detector import UnifiedDetector
 from server.models import GPSPoint
 
-console = Console()
+# ---- 改动 1: 显式锁死终端宽度，避免主屏/alt屏探测到不同宽度导致布局抖动 ----
+console = Console(width=120)
 spinner = cycle("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
 
 
@@ -41,7 +42,7 @@ def block_bar(value: float, width: int = 10) -> Text:
     filled = max(0, min(width, filled))
     color = risk_color(value)
     bar = Text(overflow="crop", no_wrap=True)
-    bar.append("▪" * filled, style=color)
+    bar.append("▓" * filled, style=color)
     bar.append("░" * (width - filled), style="grey35")
     return bar
 
@@ -70,7 +71,8 @@ def render_header(run_id: str) -> Panel:
 
 
 def render_progress(data: dict) -> Panel:
-    table = Table(box=None, show_header=False, padding=(0, 1, 0, 0), expand=True)
+    # ---- 改动 2: expand=False，不让表格随父容器宽度抖动而重新拉伸 ----
+    table = Table(box=None, show_header=False, padding=(0, 1, 0, 0), expand=False)
     table.add_column(style="grey58", width=12)
     table.add_column(style="white", justify="left")
     for k, v in data.items():
@@ -85,13 +87,14 @@ def render_progress(data: dict) -> Panel:
 
 
 def render_check(scores: dict) -> Panel:
+    # ---- 改动 3: expand=False + 显式列宽总和，杜绝进度条列被重新分配空间 ----
     table = Table(
-        box=None, expand=True, padding=(0, 1, 0, 0),
+        box=None, expand=False, padding=(0, 1, 1, 0),
         show_header=True,
     )
-    table.add_column("Check", style="grey58", header_style="bold white")
-    table.add_column("Score", justify="right", width=6, header_style="bold white italic")
-    table.add_column("", width=12, no_wrap=True)
+    table.add_column("Check", style="grey58", header_style="bold white", width=14, no_wrap=True)
+    table.add_column("Score", justify="right", width=6, header_style="bold white italic", no_wrap=True)
+    table.add_column("", width=12, no_wrap=True, overflow="crop")
 
     for name, score in scores.items():
         color = risk_color(score)
@@ -107,7 +110,7 @@ def render_check(scores: dict) -> Panel:
 
 
 def render_trace(windows: list) -> Panel:
-    table = Table(box=None, expand=True, padding=(0, 2, 0, 0))
+    table = Table(box=None, expand=False, padding=(0, 2, 0, 0))
     table.add_column("Win", style="white", width=5)
     table.add_column("Risk", width=6)
     table.add_column("Verdict", width=10)
@@ -137,7 +140,7 @@ def render_trace(windows: list) -> Panel:
 
 
 def render_summary(data: dict) -> Panel:
-    table = Table(box=None, show_header=False, padding=(0, 1, 0, 0), expand=True)
+    table = Table(box=None, show_header=False, padding=(0, 1, 0, 0), expand=False)
     table.add_column(style="grey58", width=12)
     table.add_column(style="white", justify="left")
     for k, v in data.items():
