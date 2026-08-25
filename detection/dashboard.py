@@ -44,6 +44,7 @@ C = {
     "info": "white",
     "dim": "white",
     "header_bg": "black",
+    "border": "white",
 }
 
 
@@ -91,7 +92,7 @@ class DetectionDashboard:
         text.append(" Budao Lepao ", style=f"bold {C['accent']}")
         text.append("| 刷跑 + 检测", style=f"dim {C['info']}")
         text.append(f" | {self._session_id[:8]}", style=f"dim {C['fg']}")
-        return Panel(text, style=f"bold white on {C['header_bg']}")
+        return Panel(text, style=f"bold white on {C['header_bg']}", border_style=C['border'])
 
     def render_footer(self, status: str) -> Panel:
         text = Text()
@@ -100,7 +101,7 @@ class DetectionDashboard:
         if self._run_status.get("running"):
             text.append(f"| 距离: {self._run_status.get('total_dist', 0):.0f}m ", style=C['info'])
         text.append(f"| Ctrl+C 退出", style="dim")
-        return Panel(text, style=f"bold white on {C['header_bg']}")
+        return Panel(text, style=f"bold white on {C['header_bg']}", border_style=C['border'])
 
     def render_run_progress(self) -> Panel:
         status = self._run_status
@@ -109,9 +110,10 @@ class DetectionDashboard:
                 Text("等待刷跑启动...\n运行 budaolepao run 开始刷跑", style=f"dim {C['fg']}"),
                 title="Run Progress",
                 style=C['bg'],
+                border_style=C['border'],
             )
 
-        table = Table(box=box.ROUNDED, title="[bold]Run Progress[/bold]")
+        table = Table(box=box.ASCII, title="[bold]Run Progress[/bold]")
         table.add_column("Metric", style=C['info'])
         table.add_column("Value", style=C['accent'])
 
@@ -137,10 +139,10 @@ class DetectionDashboard:
         if done:
             table.add_row("Status", "[bold green]DONE[/bold green]")
 
-        return Panel(table, style=C['bg'])
+        return Panel(table, style=C['bg'], border_style=C['border'])
 
     def render_trace_table(self) -> Panel:
-        table = Table(box=box.ROUNDED, title="[bold]Trace Detection[/bold]")
+        table = Table(box=box.ASCII, title="[bold]Trace Detection[/bold]")
         table.add_column("Win", style=C['info'])
         table.add_column("Risk", style=C['warn'])
         table.add_column("Verdict", style=C['fg'])
@@ -171,7 +173,7 @@ class DetectionDashboard:
 
                 table.add_row(str(w), risk_str, v, level)
 
-        return Panel(table, style=C['bg'])
+        return Panel(table, style=C['bg'], border_style=C['border'])
 
     def render_proactive(self) -> Panel:
         table = Table(box=box.SIMPLE, title="[bold]Proactive Check[/bold]")
@@ -217,7 +219,7 @@ class DetectionDashboard:
         if s:
             table.add_row("Speed", f"{s:.2f}m/s")
 
-        return Panel(table, style=C['bg'])
+        return Panel(table, style=C['bg'], border_style=C['border'])
 
     def generate_demo_point(self, i: int) -> GPSPoint:
         import math
