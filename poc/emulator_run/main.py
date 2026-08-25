@@ -50,6 +50,8 @@ class Config:
     dist_limit_m: float = 16000.0
     base_speed_mps: float = 4.5
     speed_amp: float = 0.8
+    min_speed_mps: float = 4.0
+    max_speed_mps: float = 5.0
     speed_cycle_sec: float = 30.0
     jitter_radius_m: float = 2.0
     ou_theta: float = 0.8
@@ -77,6 +79,12 @@ def load_config(path: str = "config.json") -> Config:
                     cfg.walk_path = [tuple(x) for x in v]
                 elif hasattr(cfg, k):
                     setattr(cfg, k, v)
+            # 向后兼容：若没显式给 min/max，但给了单一配速，则从其 ±speed_amp 推导范围
+            if "min_speed_mps" not in data and "max_speed_mps" not in data:
+                lo = cfg.base_speed_mps - cfg.speed_amp
+                hi = cfg.base_speed_mps + cfg.speed_amp
+                cfg.min_speed_mps = max(0.5, lo)
+                cfg.max_speed_mps = max(lo, hi)
         except Exception:
             pass
     return cfg
@@ -226,8 +234,14 @@ class GPSSimulator:
         return max(0.1, random.lognormvariate(self.cfg.tick_log_mu, self.cfg.tick_log_sigma))
 
     def current_speed(self, elapsed: float) -> float:
+        lo, hi = self.cfg.min_speed_mps, self.cfg.max_speed_mps
+        if hi <= lo:
+            # 无范围（单点配速），退回到 base_speed_mps
+            return self.cfg.base_speed_mps if self.cfg.base_speed_mps > 0 else lo
         phase = (elapsed % self.cfg.speed_cycle_sec) / self.cfg.speed_cycle_sec * 2 * math.pi
-        return self.cfg.base_speed_mps + self.cfg.speed_amp * math.sin(phase)
+        mid = (lo + hi) / 2.0
+        half = (hi - lo) / 2.0
+        return mid + half * math.sin(phase)
 
     def lateral_offset(self, elapsed: float) -> float:
         phase = elapsed * 2 * math.pi / self.cfg.lateral_cycle_sec

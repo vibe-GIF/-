@@ -13,6 +13,8 @@
   "dist_limit_m": 3000,
   "base_speed_mps": 4.0,
   "speed_amp": 0.6,
+  "min_speed_mps": 4.0,
+  "max_speed_mps": 5.0,
   "speed_cycle_sec": 25.0,
   "jitter_radius_m": 2.0,
   "ou_theta": 0.8,

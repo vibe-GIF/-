@@ -62,7 +62,7 @@ def _ask_demo() -> bool:
 
 
 def _config_set():
-    speed = Prompt.ask("配速 (m/s)", default="4.5")
+    speed = Prompt.ask("配速 (m/s)，范围如 4-5 或单点 4.5", default="4-5")
     distance = Prompt.ask("目标里程 (m)", default="3000")
     rc = _spawn(["config", "set", "--speed", speed, "--distance", distance])
     if rc == 0:

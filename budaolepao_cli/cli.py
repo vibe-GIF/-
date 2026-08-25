@@ -289,25 +289,55 @@ def _set_settings(root: Path, args: list):
 
     if not args:
         # Show current settings
+        lo = config.get('min_speed_mps', config.get('base_speed_mps', 4.0))
+        hi = config.get('max_speed_mps', config.get('base_speed_mps', 4.0))
+        speed_str = f"{lo:.1f}-{hi:.1f}" if lo != hi else f"{lo:.1f}"
         print("Current settings:")
-        print(f"  Speed:     {config.get('base_speed_mps', 4.0)} m/s")
+        print(f"  Speed:     {speed_str} m/s")
         print(f"  Distance:  {config.get('dist_limit_m', 3000)} m")
         print(f"  Route:     {len(config.get('walk_path', []))} points")
         print()
-        print("Usage: budaolepao settings --speed <m/s> --distance <m>")
-        print("  e.g. budaolepao settings --speed 5 --distance 5000")
+        print("Usage: lepao config set --speed <min-max|单点> --distance <m>")
+        print("  e.g. lepao config set --speed 4-5 --distance 3000")
+        print("       lepao config set --speed 4.5 --distance 3000")
         return
 
     # Parse flags
-    speed = config.get("base_speed_mps")
+    speed_min = config.get("min_speed_mps", config.get("base_speed_mps", 4.0))
+    speed_max = config.get("max_speed_mps", config.get("base_speed_mps", 4.0))
     distance = config.get("dist_limit_m")
     i = 0
     while i < len(args):
         if args[i] == "--speed" and i + 1 < len(args):
+            # 支持 "min-max" 或单点
+            val = args[i + 1]
+            if "-" in val:
+                try:
+                    a, b = val.split("-", 1)
+                    speed_min = float(a)
+                    speed_max = float(b)
+                except ValueError:
+                    print(f"Invalid speed range: {val} (期望 4-5)")
+                    return
+            else:
+                try:
+                    speed_min = speed_max = float(val)
+                except ValueError:
+                    print(f"Invalid speed: {val}")
+                    return
+            i += 2
+        elif args[i] == "--speed-min" and i + 1 < len(args):
             try:
-                speed = float(args[i + 1])
+                speed_min = float(args[i + 1])
             except ValueError:
-                print(f"Invalid speed: {args[i + 1]}")
+                print(f"Invalid speed-min: {args[i + 1]}")
+                return
+            i += 2
+        elif args[i] == "--speed-max" and i + 1 < len(args):
+            try:
+                speed_max = float(args[i + 1])
+            except ValueError:
+                print(f"Invalid speed-max: {args[i + 1]}")
                 return
             i += 2
         elif args[i] == "--distance" and i + 1 < len(args):
@@ -321,11 +351,17 @@ def _set_settings(root: Path, args: list):
             print(f"Unknown or incomplete option: {args[i]}")
             return
 
-    config["base_speed_mps"] = speed
+    # 规范 min/max
+    if speed_min > speed_max:
+        speed_min, speed_max = speed_max, speed_min
+    config["min_speed_mps"] = speed_min
+    config["max_speed_mps"] = speed_max
+    config["base_speed_mps"] = (speed_min + speed_max) / 2.0
     config["dist_limit_m"] = distance
 
     out_path = root / "poc" / "emulator_run" / "config.json"
     out_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
+    speed_str = f"{speed_min:.1f}-{speed_max:.1f}" if speed_min != speed_max else f"{speed_min:.1f}"
     print(f"Settings saved:")
-    print(f"  Speed:     {speed} m/s")
+    print(f"  Speed:     {speed_str} m/s")
     print(f"  Distance:  {distance} m")
