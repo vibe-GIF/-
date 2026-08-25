@@ -36,7 +36,7 @@ def main():
         print("               用法: budaolepao settings --speed <m/s> --distance <m>")
         print("  dashboard    TUI detection dashboard (real-time)")
         print("               用法: budaolepao dashboard [--demo]")
-        print("  setup        One-click install (run setup.bat)")
+        print("  setup        Install budaolepao (pip install -e .)")
         return
 
     root = Path(__file__).parent.parent
@@ -102,11 +102,11 @@ def main():
 
     elif args.command == "setup":
         import subprocess
-        bat = root / "setup.bat"
-        if bat.exists():
-            subprocess.run(["cmd", "/c", str(bat)], cwd=str(root))
-        else:
-            print("setup.bat not found")
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-e", str(root), "-q"],
+            cwd=str(root),
+        )
+        print("Done. Try: budaolepao -h")
 
 
 def _show_config(root: Path):
