@@ -13,7 +13,7 @@ def main():
         description="Budao Lepao - MuMu emulator runner",
         add_help=False,
     )
-    parser.add_argument("command", nargs="?", default="run",
+    parser.add_argument("command", nargs="?", default="panel",
                         choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "dashboard", "setup", "panel", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
@@ -22,23 +22,14 @@ def main():
     if args.help_flag or args.command in ("-h", "--help"):
         print("Usage: lepao [command]")
         print()
-        print("Commands:")
-        print("  (default)    Run MuMu emulator script")
-        print("  detect       Start detection server (FastAPI)")
-        print("  eval         Run evaluation")
-        print("  capture      Capture button images")
-        print("  config       Read/write config (show | set | route | map)")
-        print("               用法: lepao config show")
-        print("                      lepao config set --speed <m/s> --distance <m>")
-        print("                      lepao config route lon,lat lon,lat ...")
-        print("                      lepao config map [次数]")
-        print("  scan         Scan all drives for MuMu installation")
-        print("  dashboard    TUI detection dashboard (real-time)")
-        print("               用法: lepao dashboard [--demo]")
-        print("  setup        Install budaolepao (pip install -e .)")
-        print("  panel        TUI 控制中心菜单（包含所有命令）")
+        print("命令：")
+        print("  (默认)   打开 TUI 控制中心，所有功能都在菜单里选")
+        print("  run      一键直接启动刷跑脚本")
+        print("  -h       显示本帮助")
         print()
-        print("兼容别名: route / settings / map = config 的子动作")
+        print("其余检测/看板/评估/配置/工具都收在控制中心菜单里；")
+        print("也可直接调用，如：lepao config show / lepao detect / lepao dashboard /")
+        print("lepao eval / lepao setup")
         return
 
     if args.command == "panel":
