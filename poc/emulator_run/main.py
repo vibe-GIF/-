@@ -26,8 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+# 注意：stdout/stderr 的 UTF-8 包装移到 __main__ 里，避免被导入（如测试/scan）时劫持 stdio
 
 import cv2
 import numpy as np
@@ -614,5 +613,8 @@ def _inject_step_count(mu: MuMuController, count: int):
 
 
 if __name__ == "__main__":
+    # 仅作脚本运行时才包装 stdio（被导入/测试时不劫持）
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
     cfg = load_config()
     run(cfg)
