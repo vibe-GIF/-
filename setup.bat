@@ -48,12 +48,12 @@ echo.
 
 :: Verify
 echo [3/3] Verifying...
-where run >nul 2>&1
+where lepao >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [WARN] run not in PATH yet.
+    echo [WARN] lepao not in PATH yet.
     echo Close this window and open a new terminal.
 ) else (
-    echo [OK] run ready
+    echo [OK] lepao ready
 )
 echo.
 
@@ -62,9 +62,9 @@ echo  Install complete!
 echo ========================================
 echo.
 echo  Usage:
-echo    run                    run刷跑脚本
-echo    run dashboard          detection dashboard
-echo    run map                get coordinates
-echo    run -h                 all commands
+echo    lepao                  run刷跑脚本
+echo    lepao dashboard        detection dashboard
+echo    lepao map              get coordinates
+echo    lepao -h               all commands
 echo.
 pause

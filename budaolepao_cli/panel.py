@@ -4,7 +4,7 @@ budaolepao panel — 终端控制中心
 把所有命令收进门户菜单，选中即跑（子进程调用，与命令行行为完全一致），
 跑完自动回菜单。用于替代一条条敲命令。
 
-用法：run panel
+用法：lepao panel
 """
 
 import subprocess

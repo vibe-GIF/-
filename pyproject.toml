@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-run = "budaolepao_cli.cli:main"
+lepao = "budaolepao_cli.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["budaolepao_cli*"]
