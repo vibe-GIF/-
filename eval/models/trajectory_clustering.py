@@ -40,7 +40,13 @@ def grid_jaccard(trace_a: List[Tuple[float, float]],
                  trace_b: List[Tuple[float, float]],
                  grid_size: int = 100) -> float:
     def to_grid(pts):
-        return {(int(p[0] * grid_size), int(p[1] * grid_size)) for p in pts}
+        # 经度按纬度缩放，网格在物理空间上近似均匀，避免不同纬度比例失真
+        cells = set()
+        for lon, lat in pts:
+            col = int(lon * grid_size * math.cos(math.radians(lat)))
+            row = int(lat * grid_size)
+            cells.add((col, row))
+        return cells
     ga, gb = to_grid(trace_a), to_grid(trace_b)
     intersection = ga & gb
     union = ga | gb
