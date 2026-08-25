@@ -71,16 +71,22 @@ def _config_set():
 
 
 def _config_route():
-    pts = Prompt.ask(
-        "路线经纬度 (lon,lat lon,lat ...，至少 3 个)", default=""
-    ).strip()
-    if not pts:
-        console.print("[yellow]未输入，取消[/]")
-        Prompt.ask("按回车返回")
-        return
-    rc = _spawn(["config", "route"] + pts.split())
-    if rc == 0:
-        console.print("[green]路线已保存[/]")
+    use_map = Prompt.ask("用高德拾取器选点吗? (y/n)", default="y").strip().lower() == "y"
+    if use_map:
+        # 打开高德坐标拾取器：右键地图 → 这是哪儿 → 复制坐标 → 粘贴
+        rc = _spawn(["config", "map"])
+        if rc == 0:
+            console.print("[green]路线已保存[/]")
+    else:
+        pts = Prompt.ask(
+            "路线经纬度 (lon,lat lon,lat ...，至少 3 个)", default=""
+        ).strip()
+        if not pts:
+            console.print("[yellow]未输入，取消[/]")
+        else:
+            rc = _spawn(["config", "route"] + pts.split())
+            if rc == 0:
+                console.print("[green]路线已保存[/]")
     Prompt.ask("按回车返回")
 
 
