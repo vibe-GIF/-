@@ -9,7 +9,7 @@ if sys.stdout.encoding != "utf-8":
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="budaolepao",
+        prog="run",
         description="Budao Lepao - MuMu emulator runner",
         add_help=False,
     )
@@ -20,7 +20,7 @@ def main():
     args, _ = parser.parse_known_args()
 
     if args.help_flag or args.command in ("-h", "--help"):
-        print("Usage: budaolepao [command]")
+        print("Usage: run [command]")
         print()
         print("Commands:")
         print("  (default)    Run MuMu emulator script")
@@ -28,13 +28,13 @@ def main():
         print("  eval         Run evaluation")
         print("  capture      Capture button images")
         print("  config       Read/write config (show | set | route | map)")
-        print("               用法: budaolepao config show")
-        print("                      budaolepao config set --speed <m/s> --distance <m>")
-        print("                      budaolepao config route lon,lat lon,lat ...")
-        print("                      budaolepao config map [次数]")
+        print("               用法: run config show")
+        print("                      run config set --speed <m/s> --distance <m>")
+        print("                      run config route lon,lat lon,lat ...")
+        print("                      run config map [次数]")
         print("  scan         Scan all drives for MuMu installation")
         print("  dashboard    TUI detection dashboard (real-time)")
-        print("               用法: budaolepao dashboard [--demo]")
+        print("               用法: run dashboard [--demo]")
         print("  setup        Install budaolepao (pip install -e .)")
         print("  panel        TUI 控制中心菜单（包含所有命令）")
         print()

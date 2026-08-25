@@ -1,8 +1,8 @@
 """
-budaolepao map - 打开地图拾取器，从剪贴板读取坐标
+run map - 打开地图拾取器，从剪贴板读取坐标
 
 用法：
-  budaolepao map [次数]
+  run map [次数]
 
 流程：
   1. 打开高德拾取器

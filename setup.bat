@@ -48,12 +48,12 @@ echo.
 
 :: Verify
 echo [3/3] Verifying...
-where budaolepao >nul 2>&1
+where run >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [WARN] budaolepao not in PATH yet.
+    echo [WARN] run not in PATH yet.
     echo Close this window and open a new terminal.
 ) else (
-    echo [OK] budaolepao ready
+    echo [OK] run ready
 )
 echo.
 
@@ -62,9 +62,9 @@ echo  Install complete!
 echo ========================================
 echo.
 echo  Usage:
-echo    budaolepao             run
-echo    budaolepao dashboard   detection dashboard
-echo    budaolepao map         get coordinates
-echo    budaolepao -h          all commands
+echo    run                    run刷跑脚本
+echo    run dashboard          detection dashboard
+echo    run map                get coordinates
+echo    run -h                 all commands
 echo.
 pause
