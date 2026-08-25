@@ -1,9 +1,5 @@
 """
 TUI 检测看板 — 黑白风格，实时显示刷跑进度 + 检测结果。
-
-用法:
-  budaolepao dashboard           # 启动检测看板（等待刷跑数据）
-  budaolepao dashboard --demo    # 启动演示模式
 """
 
 import argparse
@@ -13,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 from threading import Thread, Event
+from itertools import cycle
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -20,14 +17,189 @@ from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
-from rich.live import Live
 from rich.text import Text
-from rich import box
+from rich.live import Live
+from rich.align import Align
+from rich.progress_bar import ProgressBar
 
 from integrated.detector import UnifiedDetector
 from server.models import GPSPoint
 
 console = Console()
+spinner_frames = cycle("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+
+
+def risk_color(score: float) -> str:
+    if score < 0.3:
+        return "green"
+    elif score < 0.6:
+        return "yellow"
+    return "red"
+
+
+def make_layout() -> Layout:
+    layout = Layout()
+    layout.split_column(
+        Layout(name="header", size=3),
+        Layout(name="body"),
+        Layout(name="footer", size=3),
+    )
+    layout["body"].split_row(
+        Layout(name="left", ratio=3),
+        Layout(name="right", ratio=2),
+    )
+    layout["left"].split_column(
+        Layout(name="progress"),
+        Layout(name="trace"),
+    )
+    layout["right"].split_column(
+        Layout(name="check"),
+        Layout(name="summary"),
+    )
+    return layout
+
+
+def render_header(run_id: str) -> Panel:
+    text = Text()
+    text.append("Budao Lepao", style="bold white")
+    text.append("  |  ", style="dim")
+    text.append("刷跑 + 检测", style="grey70")
+    text.append("  |  ", style="dim")
+    text.append(run_id, style="bold cyan")
+    return Panel(Align.left(text), border_style="grey35", height=3)
+
+
+def render_footer(state: str, window: int, total: int | None):
+    frame = next(spinner_frames)
+    total_str = str(total) if total else "--"
+    text = Text()
+    text.append(
+        f"{frame} {state}",
+        style="bold yellow" if state == "waiting..." else "bold green",
+    )
+    text.append(f"  |  窗口: {window}/{total_str}  |  Ctrl+C 退出", style="dim")
+    return Panel(text, border_style="grey35", height=3)
+
+
+def render_check(scores: dict) -> Panel:
+    table = Table(box=None, expand=True, show_header=True, header_style="dim italic")
+    table.add_column("Check", style="grey70")
+    table.add_column("Score", justify="right")
+    table.add_column("", width=12)
+
+    for name, score in scores.items():
+        color = risk_color(score)
+        bar = ProgressBar(
+            total=1.0,
+            completed=score,
+            width=10,
+            complete_style=color,
+            finished_style=color,
+        )
+        table.add_row(name, f"[{color}]{score:.2f}[/]", bar)
+
+    return Panel(
+        table,
+        title="[italic]Proactive Check[/]",
+        title_align="left",
+        border_style="grey35",
+    )
+
+
+def render_trace(windows: list) -> Panel:
+    table = Table(box=None, expand=True, header_style="dim")
+    for col in ["Win", "Risk", "Verdict", "Trend"]:
+        table.add_column(col)
+
+    if not windows:
+        table.add_row(Text("暂无数据,等待首个窗口...", style="dim italic"), "", "", "")
+    else:
+        for w in windows:
+            risk = w.get("window_risk", 0)
+            color = risk_color(risk)
+            v = "NORMAL"
+            if risk > 0.6:
+                v = "ALERT"
+            elif risk > 0.3:
+                v = "WARN"
+            table.add_row(
+                str(w.get("window", 0)),
+                f"[{color}]{risk:.2f}[/]",
+                v,
+                w.get("trend", "-"),
+            )
+
+    return Panel(
+        table,
+        title="[italic]Trace Detection[/]",
+        title_align="left",
+        border_style="grey35",
+    )
+
+
+def render_progress(status: dict) -> Panel:
+    table = Table(box=None, expand=True, show_header=False)
+    table.add_column(style="grey70")
+    table.add_column(style="white")
+
+    if not status.get("running"):
+        return Panel(
+            Text("等待刷跑启动...\n运行 budaolepao run 开始刷跑", style="dim italic"),
+            title="[italic]Run Progress[/]",
+            title_align="left",
+            border_style="grey35",
+        )
+
+    table.add_row("Time", f"{status.get('elapsed', 0):.1f}s")
+    table.add_row("Speed", f"{status.get('speed', 0):.2f} m/s")
+    table.add_row("Distance", f"{status.get('total_dist', 0):.1f} m")
+    table.add_row("Step Rate", f"{status.get('step_hz', 0):.2f} Hz")
+    table.add_row("Frames", str(status.get("frame", 0)))
+    table.add_row("Steps", str(status.get("step_count", 0)))
+    if status.get("noise"):
+        table.add_row("Noise", status["noise"])
+    if status.get("done"):
+        table.add_row("Status", "DONE")
+
+    return Panel(
+        table,
+        title="[italic]Run Progress[/]",
+        title_align="left",
+        border_style="grey35",
+    )
+
+
+def render_summary(status: dict, windows: list) -> Panel:
+    table = Table(box=None, expand=True, show_header=False)
+    table.add_column(style="grey70")
+    table.add_column(style="white")
+
+    if windows:
+        scores = [r.get("window_risk", 0) for r in windows if r]
+        warnings = sum(1 for r in windows if r and r.get("warning"))
+        table.add_row("Windows", str(len(windows)))
+        table.add_row("Avg Risk", f"{sum(scores)/len(scores):.2f}" if scores else "0.00")
+        table.add_row("Peak Risk", f"{max(scores):.2f}" if scores else "0.00")
+        table.add_row("Warnings", str(warnings))
+    else:
+        table.add_row("Windows", "0")
+        table.add_row("Avg Risk", "0.00")
+        table.add_row("Peak Risk", "0.00")
+        table.add_row("Warnings", "0")
+
+    d = status.get("total_dist", 0)
+    s = status.get("speed", 0)
+    if d:
+        table.add_row("Distance", f"{d:.0f}m")
+    if s:
+        table.add_row("Speed", f"{s:.2f}m/s")
+
+    return Panel(
+        table,
+        title="[italic]Summary[/]",
+        title_align="left",
+        border_style="grey35",
+    )
 
 
 class DetectionDashboard:
@@ -39,32 +211,11 @@ class DetectionDashboard:
         self._run_status = {"running": False}
         self._session_id = f"run_{int(time.time()) % 10000}"
         self._status_path = (
-            Path(__file__).parent.parent / "poc" / "emulator_run" / "run_status.json"
+            Path(__file__).parent.parent
+            / "poc"
+            / "emulator_run"
+            / "run_status.json"
         )
-
-    # ----------------------------------------------------------
-    # 布局
-    # ----------------------------------------------------------
-    def make_layout(self) -> Layout:
-        layout = Layout()
-        layout.split_column(
-            Layout(name="header", size=3),
-            Layout(name="body"),
-            Layout(name="footer", size=3),
-        )
-        layout["body"].split_row(
-            Layout(name="left", ratio=3),
-            Layout(name="right", ratio=2),
-        )
-        layout["left"].split_column(
-            Layout(name="run_progress", ratio=1),
-            Layout(name="trace_table", ratio=2),
-        )
-        layout["right"].split_column(
-            Layout(name="proactive", ratio=1),
-            Layout(name="summary", ratio=1),
-        )
-        return layout
 
     def read_run_status(self):
         try:
@@ -75,152 +226,6 @@ class DetectionDashboard:
         except Exception:
             pass
 
-    # ----------------------------------------------------------
-    # 各区块渲染
-    # ----------------------------------------------------------
-    def render_header(self) -> Panel:
-        text = Text()
-        text.append(" Budao Lepao ", style="bold white")
-        text.append("| 刷跑 + 检测 ", style="dim")
-        text.append(f"| {self._session_id}", style="dim")
-        return Panel(text, border_style="white", style="black")
-
-    def render_footer(self, status: str) -> Panel:
-        text = Text()
-        text.append(f" {status} ", style="bold white")
-        text.append(f"| 窗口: {len(self._results)} ", style="dim")
-        if self._run_status.get("running"):
-            text.append(
-                f"| 距离: {self._run_status.get('total_dist', 0):.0f}m ",
-                style="dim",
-            )
-        text.append("| Ctrl+C 退出", style="dim")
-        return Panel(text, border_style="white", style="black")
-
-    def render_run_progress(self) -> Panel:
-        status = self._run_status
-        if not status.get("running") and not self.demo:
-            return Panel(
-                Text("等待刷跑启动...\n运行 budaolepao run 开始刷跑", style="dim"),
-                title="Run Progress",
-                title_align="left",
-                border_style="white",
-                style="black",
-            )
-
-        table = Table(box=None, show_header=False, padding=(0, 1))
-        table.add_column(style="dim")
-        table.add_column(style="white")
-        table.add_row("Time", f"{status.get('elapsed', 0):.1f}s")
-        table.add_row("Speed", f"{status.get('speed', 0):.2f} m/s")
-        table.add_row("Distance", f"{status.get('total_dist', 0):.1f} m")
-        table.add_row("Step Rate", f"{status.get('step_hz', 0):.2f} Hz")
-        table.add_row("Frames", str(status.get("frame", 0)))
-        table.add_row("Steps", str(status.get("step_count", 0)))
-        if status.get("noise"):
-            table.add_row("Noise", status["noise"])
-        if status.get("done"):
-            table.add_row("Status", "DONE")
-
-        return Panel(
-            table,
-            title="Run Progress",
-            title_align="left",
-            border_style="white",
-            style="black",
-        )
-
-    def render_trace_table(self) -> Panel:
-        table = Table(
-            box=None,
-            title="Trace Detection",
-            title_style="italic dim",
-            header_style="dim",
-            padding=(0, 1),
-        )
-        table.add_column("Win")
-        table.add_column("Risk")
-        table.add_column("Verdict")
-        table.add_column("Trend")
-
-        if not self._results:
-            table.add_row("-", "-", "-", "-")
-        else:
-            for r in self._results[-8:]:
-                risk = r.get("window_risk", 0)
-                level = r.get("progressive_level", {}).get("level", "normal")
-                v = "NORMAL"
-                if risk > 0.6:
-                    v = "ALERT"
-                elif risk > 0.3:
-                    v = "WARN"
-                table.add_row(
-                    str(r.get("window", 0)),
-                    f"{risk:.2f}",
-                    v,
-                    level,
-                )
-
-        return Panel(table, border_style="white", style="black")
-
-    def render_proactive(self) -> Table:
-        table = Table(
-            box=None,
-            title="Proactive Check",
-            title_style="italic dim",
-            header_style="dim",
-            padding=(0, 1),
-        )
-        table.add_column("Check")
-        table.add_column("Score")
-
-        checks = [
-            ("TLS", 0.15),
-            ("TCP Stack", 0.08),
-            ("Timing", 0.12),
-            ("Challenge", 0.05),
-        ]
-        for name, score in checks:
-            table.add_row(name, f"{score:.2f}")
-
-        return table
-
-    def render_summary(self) -> Panel:
-        table = Table(
-            box=None,
-            title="Summary",
-            title_style="italic dim",
-            header_style="dim",
-            padding=(0, 1),
-        )
-        table.add_column("Metric")
-        table.add_column("Value")
-
-        if self._results:
-            scores = [r.get("window_risk", 0) for r in self._results if r]
-            warnings = sum(1 for r in self._results if r and r.get("warning"))
-            table.add_row("Windows", str(len(self._results)))
-            table.add_row("Avg Risk", f"{sum(scores)/len(scores):.2f}")
-            table.add_row("Peak Risk", f"{max(scores):.2f}")
-            table.add_row("Warnings", str(warnings))
-        else:
-            table.add_row("Windows", "0")
-            table.add_row("Avg Risk", "0.00")
-            table.add_row("Peak Risk", "0.00")
-            table.add_row("Warnings", "0")
-
-        d = self._run_status.get("total_dist", 0)
-        s = self._run_status.get("speed", 0)
-        if d:
-            table.add_row("Distance", f"{d:.0f}m")
-        if s:
-            table.add_row("Speed", f"{s:.2f}m/s")
-
-        return Panel(table, border_style="white", style="black")
-
-    # ----------------------------------------------------------
-    # 演示数据
-    # ----------------------------------------------------------
     def generate_demo_point(self, i: int) -> GPSPoint:
         lon = 114.407 + 0.001 * math.sin(i * 0.1)
         lat = 30.469 + 0.001 * math.cos(i * 0.1)
@@ -254,34 +259,40 @@ class DetectionDashboard:
             time.sleep(0.5)
         self._run_status["running"] = False
 
-    # ----------------------------------------------------------
-    # 主循环
-    # ----------------------------------------------------------
     def run(self):
-        layout = self.make_layout()
+        layout = make_layout()
 
         if self.demo:
             Thread(target=self.run_demo, daemon=True).start()
 
-        try:
-            with Live(layout, refresh_per_second=4, screen=True):
-                while not self._stop.is_set():
-                    if not self.demo:
-                        self.read_run_status()
+        scores = {
+            "TLS": 0.15,
+            "TCP Stack": 0.08,
+            "Timing": 0.12,
+            "Challenge": 0.05,
+        }
+        window_count = 0
 
-                    running = self._run_status.get("running") or self.demo
-                    layout["header"].update(self.render_header())
-                    layout["run_progress"].update(self.render_run_progress())
-                    layout["trace_table"].update(self.render_trace_table())
-                    layout["proactive"].update(self.render_proactive())
-                    layout["summary"].update(self.render_summary())
-                    layout["footer"].update(
-                        self.render_footer("running" if running else "waiting...")
+        with Live(layout, console=console, refresh_per_second=8, screen=True) as live:
+            while not self._stop.is_set():
+                if not self.demo:
+                    self.read_run_status()
+
+                running = self._run_status.get("running") or self.demo
+
+                layout["header"].update(render_header(self._session_id))
+                layout["progress"].update(render_progress(self._run_status))
+                layout["trace"].update(render_trace(self._results))
+                layout["check"].update(render_check(scores))
+                layout["summary"].update(render_summary(self._run_status, self._results))
+                layout["footer"].update(
+                    render_footer(
+                        "running" if running else "waiting...",
+                        len(self._results),
+                        None,
                     )
-                    time.sleep(0.25)
-        except KeyboardInterrupt:
-            self._stop.set()
-            console.print("\nDashboard stopped")
+                )
+                time.sleep(0.12)
 
 
 def main():
