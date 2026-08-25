@@ -62,9 +62,8 @@ echo  Install complete!
 echo ========================================
 echo.
 echo  Usage:
-echo    lepao                  run刷跑脚本
-echo    lepao dashboard        detection dashboard
-echo    lepao map              get coordinates
-echo    lepao -h               all commands
+echo    lepao                  打开控制中心(所有功能菜单里选)
+echo    lepao run              直接刷跑
+echo    lepao -h               所有命令
 echo.
 pause
