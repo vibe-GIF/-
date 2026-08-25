@@ -41,7 +41,7 @@ def block_bar(value: float, width: int = 10) -> Text:
     filled = max(0, min(width, filled))
     color = risk_color(value)
     bar = Text()
-    bar.append("▓" * filled, style=color)
+    bar.append("▪" * filled, style=color)
     bar.append("░" * (width - filled), style="grey35")
     return bar
 
