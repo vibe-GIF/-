@@ -165,8 +165,11 @@ def _find_player(mgr_dir: Path) -> Path:
     candidates = [
         mgr_dir / "MuMuPlayer.exe",
         mgr_dir / "MuMuPlayer-12.0.exe",
+        mgr_dir / "MuMuNxLauncher.exe",
+        mgr_dir / "MuMuNxMain.exe",
         mgr_dir.parent / "MuMuPlayer.exe",
-        mgr_dir.parent / "MuMuPlayer-12.0.exe",
+        mgr_dir.parent / "MuMuNxLauncher.exe",
+        mgr_dir.parent / "MuMuNxMain.exe",
         mgr_dir.parent.parent / "MuMuPlayer.exe",
         mgr_dir.parent / "GameViewer.exe",
         mgr_dir.parent / "GameViewerLauncher.exe",
@@ -174,10 +177,9 @@ def _find_player(mgr_dir: Path) -> Path:
     for c in candidates:
         if c.is_file():
             return c
-    for p in mgr_dir.parent.rglob("MuMuPlayer*.exe"):
-        return p
-    for p in mgr_dir.parent.rglob("GameViewer*.exe"):
-        return p
+    for pattern in ("MuMuPlayer*.exe", "MuMuNxLauncher*.exe", "MuMuNxMain*.exe", "GameViewer*.exe"):
+        for p in mgr_dir.parent.rglob(pattern):
+            return p
     return None
 
 
@@ -372,6 +374,7 @@ def run(cfg: Config):
         time.sleep(2)
     else:
         print(f"{CLR_A}Timed out waiting for MuMu{CLR_RST}")
+        print(f"{CLR_P}MuMu 未响应。请先手动双击桌面图标打开 MuMu，等它完全启动后再运行本命令。{CLR_RST}")
         return
 
     # ADB 连接
