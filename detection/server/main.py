@@ -24,6 +24,29 @@ class HealthResponse(BaseModel):
     rules: List[str]
 
 
+@app.get("/")
+def index():
+    from fastapi.responses import HTMLResponse
+    html = """
+    <html><head><title>Budao Lepao Detection</title>
+    <style>body{font-family:monospace;background:#111;color:#eee;padding:40px}
+    h1{color:#6f6}a{color:#6cf}li{margin:6px}</style></head>
+    <body><h1>Budao Lepao Detection API</h1>
+    <p>Service running. Endpoints:</p>
+    <ul>
+      <li><a href="/health">GET /health</a> - health check</li>
+      <li>POST /api/detect - trace detection</li>
+      <li>POST /api/detect/batch - batch detection</li>
+      <li>POST /api/fingerprint - fingerprint check</li>
+      <li>POST /api/proactive/detect - proactive probe</li>
+      <li>POST /api/streaming/start|feed|summary|stop - streaming</li>
+      <li>POST /api/challenge/generate|verify - challenge</li>
+    </ul>
+    </body></html>
+    """
+    return HTMLResponse(content=html)
+
+
 @app.get("/health", response_model=HealthResponse)
 def health():
     return HealthResponse(
