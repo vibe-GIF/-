@@ -27,16 +27,17 @@ def main():
         print("  detect       Start detection server (FastAPI)")
         print("  eval         Run evaluation")
         print("  capture      Capture button images")
-        print("  config       Show current config")
+        print("  config       Read/write config (show | set | route | map)")
+        print("               用法: budaolepao config show")
+        print("                      budaolepao config set --speed <m/s> --distance <m>")
+        print("                      budaolepao config route lon,lat lon,lat ...")
+        print("                      budaolepao config map [次数]")
         print("  scan         Scan all drives for MuMu installation")
-        print("  route        Set running route (lon,lat lon,lat ...)")
-        print("  map          Auto coordinate picker (open Amap, clipboard read)")
-        print("               用法: budaolepao map [次数]")
-        print("  settings     Set speed and distance")
-        print("               用法: budaolepao settings --speed <m/s> --distance <m>")
         print("  dashboard    TUI detection dashboard (real-time)")
         print("               用法: budaolepao dashboard [--demo]")
         print("  setup        Install budaolepao (pip install -e .)")
+        print()
+        print("兼容别名: route / settings / map = config 的子动作")
         return
 
     root = Path(__file__).parent.parent
@@ -69,7 +70,7 @@ def main():
         _capture(root)
 
     elif args.command == "config":
-        _show_config(root)
+        _config(root, sys.argv[2:])
 
     elif args.command == "scan":
         _scan_mumu(root)
@@ -78,16 +79,7 @@ def main():
         _set_route(root, sys.argv[2:])
 
     elif args.command == "map":
-        import subprocess
-        script = root / "poc" / "emulator_run" / "picker.py"
-        args_list = [sys.executable, str(script)]
-        if len(sys.argv) > 2:
-            args_list.append(sys.argv[2])  # count
-        if len(sys.argv) > 3:
-            args_list.append(sys.argv[3])  # mode (auto/manual)
-        if len(sys.argv) > 4:
-            args_list.append(sys.argv[4])  # address
-        subprocess.run(args_list, cwd=str(root / "poc" / "emulator_run"))
+        _map(root, sys.argv[2:])
 
     elif args.command == "settings":
         _set_settings(root, sys.argv[2:])
@@ -117,6 +109,37 @@ def _show_config(root: Path):
                          indent=2, ensure_ascii=False))
     else:
         print("config.json not found")
+
+
+def _config(root: Path, args: list):
+    """统一配置入口：budaolepao config [show|set|route|map] [options]"""
+    if not args or args[0] == "show":
+        _show_config(root)
+    elif args[0] == "set":
+        _set_settings(root, args[1:])
+    elif args[0] == "route":
+        _set_route(root, args[1:])
+    elif args[0] == "map":
+        _map(root, args[1:])
+    else:
+        print("Usage: budaolepao config [show|set|route|map]")
+        print("  config show                          # 显示当前配置")
+        print("  config set --speed <m/s> --distance <m>  # 设置配速/里程")
+        print("  config route lon,lat lon,lat ...     # 设置路线")
+        print("  config map [次数]                    # 拾取器读剪贴板坐标")
+
+
+def _map(root: Path, args: list):
+    import subprocess
+    script = root / "poc" / "emulator_run" / "picker.py"
+    args_list = [sys.executable, str(script)]
+    if len(args) > 0 and args[0].isdigit():
+        args_list.append(args[0])  # count
+    if len(args) > 1:
+        args_list.append(args[1])  # mode (auto/manual)
+    if len(args) > 2:
+        args_list.append(args[2])  # address
+    subprocess.run(args_list, cwd=str(root / "poc" / "emulator_run"))
 
 
 def _capture(root: Path):
