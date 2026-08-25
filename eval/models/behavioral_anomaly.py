@@ -2,15 +2,10 @@
 行为离群检测 — 分析配速分布、上传时间规律、设备-账号关联。
 """
 
-import math
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
 import numpy as np
-
-
-def geo_dist_m(lat1, lon1, lat2, lon2) -> float:
-    return math.hypot(lat2 - lat1, lon2 - lon1) * 111_320
 
 
 def pace_analysis(speeds: List[float]) -> dict:

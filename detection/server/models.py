@@ -10,6 +10,7 @@ class GPSPoint(BaseModel):
     altitude: Optional[float] = None
     bearing: Optional[float] = None
     speed: Optional[float] = None
+    is_mocked: Optional[bool] = False
     timestamp: float
 
 

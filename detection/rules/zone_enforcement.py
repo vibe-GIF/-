@@ -15,6 +15,12 @@ class ZoneEnforcementRule(BaseRule):
                 detail="No zone configured", applicable=False,
             )
 
+        if not trace.gps_points:
+            return RuleResult(
+                rule_name=self.name, passed=True, score=0.0,
+                detail="No GPS points", applicable=False,
+            )
+
         lon_min, lat_min, lon_max, lat_max = config.zone_bounds
         first = trace.gps_points[0]
 

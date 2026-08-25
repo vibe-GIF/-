@@ -15,6 +15,14 @@ from typing import List, Tuple
 import numpy as np
 
 
+def _geo_dist_m(lat1, lon1, lat2, lon2) -> float:
+    """球面近似距离（米），经度按 cos(lat) 缩放。"""
+    avg_lat = math.radians((lat1 + lat2) / 2.0)
+    d_lat = (lat2 - lat1) * 111_320
+    d_lon = (lon2 - lon1) * 111_320 * math.cos(avg_lat)
+    return math.hypot(d_lat, d_lon)
+
+
 @dataclass
 class TraceSample:
     trace_id: str
@@ -124,7 +132,7 @@ def generate_attack_trace(trace_id: str, n_points: int = 200,
 
         lon1, lat1 = route[idx]
         lon2, lat2 = route[(idx + 1) % len(route)]
-        seg_len = math.hypot(lat2 - lat1, lon2 - lon1) * 111_320
+        seg_len = _geo_dist_m(lat1, lon1, lat2, lon2)
 
         move = speed * dt
         seg_dist += move
@@ -134,7 +142,7 @@ def generate_attack_trace(trace_id: str, n_points: int = 200,
             idx = (idx + 1) % len(route)
             lon1, lat1 = route[idx]
             lon2, lat2 = route[(idx + 1) % len(route)]
-            seg_len = math.hypot(lat2 - lat1, lon2 - lon1) * 111_320
+            seg_len = _geo_dist_m(lat1, lon1, lat2, lon2)
 
         ratio = seg_dist / seg_len if seg_len > 0 else 0
         base_lon = lon1 + (lon2 - lon1) * ratio

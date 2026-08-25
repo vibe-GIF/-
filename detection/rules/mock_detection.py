@@ -12,7 +12,7 @@ class MockDetectionRule(BaseRule):
     def evaluate(self, trace: TraceRequest, config: MockDetectionConfig) -> RuleResult:
         mock_flags = sum(
             1 for p in trace.gps_points
-            if getattr(p, "mock_mark", False)
+            if p.is_mocked
         )
         if mock_flags >= config.mock_mark_threshold:
             return RuleResult(

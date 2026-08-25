@@ -45,11 +45,10 @@ _KNOWN_DEVICE_JA3 = {
     "e7e0c0b1e0c0b1e0c0b1e0c0b1e0c0b": "emulator_curl",
 }
 
-# 模拟器 JA3 指纹黑名单
+# 模拟器 JA3 指纹黑名单（必须是 32 位十六进制 MD5）
 _EMULATOR_JA3_SIGNATURES = {
     "d5f0e0c0b1e0c0b1e0c0b1e0c0b1e0c",  # Python requests
-    "e7e0c0b1e0c0b1e0c0b1e0c0b1e0c0b1",  # curl
-    "b8b1b8e0c0b1e0c0b1e0c0b1e0c0b1e",  # 旧版 WebView
+    "e7e0c0b1e0c0b1e0c0b1e0c0b1e0c0b",  # curl
 }
 
 

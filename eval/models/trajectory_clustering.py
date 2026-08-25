@@ -14,7 +14,11 @@ from sklearn.cluster import DBSCAN
 
 
 def geo_dist_m(lat1, lon1, lat2, lon2) -> float:
-    return math.hypot(lat2 - lat1, lon2 - lon1) * 111_320
+    """球面近似距离（米），经度按 cos(lat) 缩放。"""
+    avg_lat = math.radians((lat1 + lat2) / 2.0)
+    d_lat = (lat2 - lat1) * 111_320
+    d_lon = (lon2 - lon1) * 111_320 * math.cos(avg_lat)
+    return math.hypot(d_lat, d_lon)
 
 
 def dtw_distance(trace_a: List[Tuple[float, float]],
