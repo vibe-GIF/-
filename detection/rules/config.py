@@ -78,6 +78,15 @@ class CheckpointConfig(RuleConfig):
 
 
 @dataclass
+class StepDistanceConfig(RuleConfig):
+    stride_length_m: float = 0.7
+    min_gps_m: float = 500.0
+    min_steps: int = 100
+    max_ratio: float = 2.5
+    min_ratio: float = 0.4
+
+
+@dataclass
 class DetectionConfig:
     mock_detection: MockDetectionConfig = field(
         default_factory=MockDetectionConfig
@@ -111,6 +120,9 @@ class DetectionConfig:
     )
     checkpoint: CheckpointConfig = field(
         default_factory=CheckpointConfig
+    )
+    step_distance: StepDistanceConfig = field(
+        default_factory=StepDistanceConfig
     )
 
     risk_thresholds: Dict[str, float] = field(

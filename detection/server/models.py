@@ -33,6 +33,8 @@ class TraceRequest(BaseModel):
     account_id: Optional[str] = None
     campus_id: Optional[str] = None
     uploaded_at: Optional[float] = None
+    total_steps: Optional[int] = None
+    accel_variance: Optional[float] = None
 
 
 class RuleResult(BaseModel):

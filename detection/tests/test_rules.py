@@ -250,5 +250,53 @@ def test_e2e_suspicious_trace(engine, scorer):
     assert risk > 0.3
 
 
+# -----------------------------------------------------------
+#  Step-Distance consistency (WeRun vs GPS)
+# -----------------------------------------------------------
+
+def _moving_trace(n=50, step=0.00005):
+    lat, lon = 30.469, 114.407
+    t0 = time.time()
+    pts = []
+    for i in range(n):
+        lat += step
+        lon += step
+        pts.append(make_point(lon, lat, ts=t0 + i * 1.0))
+    return pts
+
+
+def test_step_distance_spoofed(engine):
+    from rules.step_distance import StepDistanceRule
+    from rules.config import StepDistanceConfig
+    rule = StepDistanceRule()
+    pts = _moving_trace()  # ~ 50 * 7.8m ≈ 390m... make longer
+    pts = _moving_trace(n=200)  # ~1.5km
+    trace = make_trace(pts)
+    trace.total_steps = 5  # GPS ran but almost no steps
+    result = rule.evaluate(trace, StepDistanceConfig())
+    assert not result.passed
+    assert result.score == 1.0
+
+
+def test_step_distance_consistent(engine):
+    from rules.step_distance import StepDistanceRule
+    from rules.config import StepDistanceConfig
+    rule = StepDistanceRule()
+    pts = _moving_trace(n=200)  # ~1.5km
+    trace = make_trace(pts)
+    trace.total_steps = 2200  # ~1.5km at 0.7m stride
+    result = rule.evaluate(trace, StepDistanceConfig())
+    assert result.passed
+
+
+def test_step_distance_no_steps_not_applicable(engine):
+    from rules.step_distance import StepDistanceRule
+    from rules.config import StepDistanceConfig
+    rule = StepDistanceRule()
+    trace = make_trace(_moving_trace())
+    result = rule.evaluate(trace, StepDistanceConfig())
+    assert result.applicable is False
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
