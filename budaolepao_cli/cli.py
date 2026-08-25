@@ -51,8 +51,9 @@ def main():
         from server.main import app
         import uvicorn
 
-        print("Starting detection server at http://localhost:8000")
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        print("Starting detection server at http://127.0.0.1:8000")
+        print("浏览器打开 http://127.0.0.1:8000 （不要用 0.0.0.0）")
+        uvicorn.run(app, host="127.0.0.1", port=8000)
 
     elif args.command == "eval":
         sys.path.insert(0, str(root / "eval"))
