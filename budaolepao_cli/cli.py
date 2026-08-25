@@ -14,7 +14,7 @@ def main():
         add_help=False,
     )
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "-h", "--help"])
+                        choices=["run", "detect", "eval", "capture", "config", "scan", "route", "map", "settings", "dashboard", "-h", "--help"])
     parser.add_argument("-h", "--help", action="store_true", dest="help_flag")
 
     args, _ = parser.parse_known_args()
@@ -34,6 +34,8 @@ def main():
         print("               用法: budaolepao map [次数]")
         print("  settings     Set speed and distance")
         print("               用法: budaolepao settings --speed <m/s> --distance <m>")
+        print("  dashboard    TUI detection dashboard (real-time)")
+        print("               用法: budaolepao dashboard [--demo]")
         return
 
     root = Path(__file__).parent.parent
@@ -88,6 +90,14 @@ def main():
 
     elif args.command == "settings":
         _set_settings(root, sys.argv[2:])
+
+    elif args.command == "dashboard":
+        import subprocess
+        script = root / "detection" / "dashboard.py"
+        cmd = [sys.executable, str(script)]
+        if "--demo" in sys.argv:
+            cmd.append("--demo")
+        subprocess.run(cmd, cwd=str(root / "detection"))
 
 
 def _show_config(root: Path):
