@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-# 注意：stdout/stderr 的 UTF-8 包装移到 __main__ 里，避免被导入（如测试/scan）时劫持 stdio
+# stdio 包装移到 __main__（避免被导入/测试时劫持）
 
 import cv2
 import numpy as np
@@ -49,8 +49,6 @@ class Config:
     dist_limit_m: float = 16000.0
     base_speed_mps: float = 4.5
     speed_amp: float = 0.8
-    min_speed_mps: float = 4.0
-    max_speed_mps: float = 5.0
     speed_cycle_sec: float = 30.0
     jitter_radius_m: float = 2.0
     ou_theta: float = 0.8
@@ -63,16 +61,21 @@ class Config:
     tap_delay_sec: float = 1.0
     window_delay_sec: float = 15.0
     instance_index: int = 0
-    face_check: bool = False
-    face_photo: str = ""
+    run_pkg: str = "com.lptiyu.tanke"  # 独立步道乐跑 App（绕开微信风控）
     auto_start_run: bool = True
-    click_threshold: float = 0.75
-    # 图片识别模板（放 img/ 目录，由 option 9 采集；点击时相对 cwd=poc/emulator_run）
-    tpl_begin: str = "img/begin_run.png"      # 开始乐跑
-    tpl_free: str = "img/free_run.png"        # 自由跑确认
-    tpl_pause: str = "img/pause_run.png"      # 长按暂停
-    tpl_end: str = "img/end_run.png"          # 结束
-    tpl_confirm_end: str = "img/confirm_end.png"  # 结束二次确认
+    # 竖屏 900x1600 下按钮坐标（App 强制竖屏，坐标稳定）
+    click_threshold: float = 0.7
+    # 图片识别模板（img/，图片识别优先，坐标兜底）
+    tpl_begin: str = "img/begin_run.png"
+    tpl_free: str = "img/free_run.png"
+    tpl_pause: str = "img/pause_run.png"
+    tpl_end: str = "img/end_run.png"
+    tpl_confirm_end: str = "img/confirm_end.png"
+    begin_x: int = 454; begin_y: int = 788       # 开始乐跑(兜底坐标)
+    free_x: int = 600;  free_y: int = 985        # 自由跑确认(兜底)
+    pause_x: int = 450; pause_y: int = 1500      # 长按暂停(兜底)
+    end_x: int = 659;   end_y: int = 1520        # 结束(红,兜底)
+    confirm_x: int = 575; confirm_y: int = 936   # 确认结束(绿,兜底)
 
 
 def load_config(path: str = "config.json") -> Config:
@@ -86,12 +89,6 @@ def load_config(path: str = "config.json") -> Config:
                     cfg.walk_path = [tuple(x) for x in v]
                 elif hasattr(cfg, k):
                     setattr(cfg, k, v)
-            # 向后兼容：若没显式给 min/max，但给了单一配速，则从其 ±speed_amp 推导范围
-            if "min_speed_mps" not in data and "max_speed_mps" not in data:
-                lo = cfg.base_speed_mps - cfg.speed_amp
-                hi = cfg.base_speed_mps + cfg.speed_amp
-                cfg.min_speed_mps = max(0.5, lo)
-                cfg.max_speed_mps = max(lo, hi)
         except Exception:
             pass
     return cfg
@@ -115,15 +112,8 @@ def find_emu_dir() -> Tuple[Path, Path]:
             data = json.loads(cfg.read_text(encoding="utf-8"))
             mgr_dir = Path(data["emu_dir"])
             if mgr_dir.joinpath("MuMuManager.exe").is_file():
-                player = Path(data.get("player_path", "")) if data.get("player_path") else None
-                if not player or not player.is_file():
-                    player = _find_player(mgr_dir)
-                if player:
-                    cfg.write_text(json.dumps({
-                        "emu_dir": str(mgr_dir),
-                        "player_path": str(player),
-                    }), encoding="utf-8")
-                    return mgr_dir, player
+                player = Path(data.get("player_path", str(mgr_dir / "MuMuPlayer.exe")))
+                return mgr_dir, player
         except Exception:
             pass
     result = _scan_common_paths() or _scan_all_drives()
@@ -187,11 +177,8 @@ def _find_player(mgr_dir: Path) -> Path:
     candidates = [
         mgr_dir / "MuMuPlayer.exe",
         mgr_dir / "MuMuPlayer-12.0.exe",
-        mgr_dir / "MuMuNxLauncher.exe",
-        mgr_dir / "MuMuNxMain.exe",
         mgr_dir.parent / "MuMuPlayer.exe",
-        mgr_dir.parent / "MuMuNxLauncher.exe",
-        mgr_dir.parent / "MuMuNxMain.exe",
+        mgr_dir.parent / "MuMuPlayer-12.0.exe",
         mgr_dir.parent.parent / "MuMuPlayer.exe",
         mgr_dir.parent / "GameViewer.exe",
         mgr_dir.parent / "GameViewerLauncher.exe",
@@ -199,9 +186,10 @@ def _find_player(mgr_dir: Path) -> Path:
     for c in candidates:
         if c.is_file():
             return c
-    for pattern in ("MuMuPlayer*.exe", "MuMuNxLauncher*.exe", "MuMuNxMain*.exe", "GameViewer*.exe"):
-        for p in mgr_dir.parent.rglob(pattern):
-            return p
+    for p in mgr_dir.parent.rglob("MuMuPlayer*.exe"):
+        return p
+    for p in mgr_dir.parent.rglob("GameViewer*.exe"):
+        return p
     return None
 
 
@@ -212,11 +200,7 @@ def meter_to_deg(lat: float, dx: float, dy: float) -> Tuple[float, float]:
 
 
 def geo_dist_m(lat1, lon1, lat2, lon2) -> float:
-    """球面近似距离：经度方向需按纬度缩放 cos(lat)。"""
-    avg_lat = math.radians((lat1 + lat2) / 2.0)
-    d_lat = (lat2 - lat1) * 111_320
-    d_lon = (lon2 - lon1) * 111_320 * math.cos(avg_lat)
-    return math.hypot(d_lat, d_lon)
+    return math.hypot(lat2 - lat1, lon2 - lon1) * 111_320
 
 
 # ============================================================
@@ -241,14 +225,8 @@ class GPSSimulator:
         return max(0.1, random.lognormvariate(self.cfg.tick_log_mu, self.cfg.tick_log_sigma))
 
     def current_speed(self, elapsed: float) -> float:
-        lo, hi = self.cfg.min_speed_mps, self.cfg.max_speed_mps
-        if hi <= lo:
-            # 无范围（单点配速），退回到 base_speed_mps
-            return self.cfg.base_speed_mps if self.cfg.base_speed_mps > 0 else lo
         phase = (elapsed % self.cfg.speed_cycle_sec) / self.cfg.speed_cycle_sec * 2 * math.pi
-        mid = (lo + hi) / 2.0
-        half = (hi - lo) / 2.0
-        return mid + half * math.sin(phase)
+        return self.cfg.base_speed_mps + self.cfg.speed_amp * math.sin(phase)
 
     def lateral_offset(self, elapsed: float) -> float:
         phase = elapsed * 2 * math.pi / self.cfg.lateral_cycle_sec
@@ -288,6 +266,17 @@ class MuMuController:
         ], check=False)
         return r.returncode == 0
 
+    def force_stop(self, pkg: str):
+        """强制结束 App 进程，确保下次启动从头（主页）开始，避免恢复上次的残留页。"""
+        self.adb_shell(f"am force-stop {pkg}")
+
+    def shutdown(self):
+        """关闭指定 MuMu 实例（清状态，再从头启动）。"""
+        try:
+            self.run(["control", "-v", str(self.instance), "shutdown"], check=False, timeout=15)
+        except Exception:
+            pass
+
     def installed_pkgs(self) -> set:
         r = self.run(["control", "-v", str(self.instance), "app", "info", "-i"], check=False)
         if r.returncode != 0:
@@ -308,27 +297,10 @@ class MuMuController:
             return None
 
     def start_player(self):
-        # 优先用 MuMuManager 直接启动：主程序 + 指定实例（比 Popen 启动器更可靠）
-        try:
-            self.run(["main", "launch"], check=False, timeout=15)
-        except Exception:
-            pass
-        try:
-            self.run(["control", "-v", str(self.instance), "launch"], check=False, timeout=15)
-        except Exception:
-            pass
-        # 兜底：启动器仍在则再拉起
         if self.player.is_file():
             subprocess.Popen([str(self.player)])
         else:
-            print(f"{CLR_P}MuMuPlayer not found, assuming already running{CLR_RST}")
-
-    def launch_instance(self):
-        """重试启动指定实例（用于等待超时后自动恢复）。"""
-        try:
-            self.run(["control", "-v", str(self.instance), "launch"], check=False, timeout=15)
-        except Exception:
-            pass
+            print(f"{CLR_P}MuMuPlayer not found at {self.player}, assuming already running{CLR_RST}")
 
     def adb_shell(self, cmd: str) -> Optional[str]:
         if not self.adb_addr:
@@ -403,6 +375,19 @@ class UIController:
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
 
+    def longpress(self, x: int, y: int):
+        subprocess.run(
+            [str(self.adb), "-s", self.addr, "shell", "input", "swipe",
+             str(x), str(y), str(x), str(y), "2500"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    def back(self):
+        subprocess.run(
+            [str(self.adb), "-s", self.addr, "shell", "input", "keyevent", "4"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
 
 # ============================================================
 #  主运行逻辑
@@ -413,12 +398,13 @@ def run(cfg: Config):
     mu = MuMuController(emu_dir, player_path, cfg)
     gps = GPSSimulator(cfg)
 
-    # 启动模拟器（一键拉起 MuMu）
+    # 启动模拟器（ADB 就绪作为探测，等不齐自动重试启动，最可靠）
+    # 注：不在启动前 shutdown —— 脚本自身 shutdown 后重启 MuMu 不可靠；
+    #    干净主页由 force-stop + am start SplashActivity 保证。
     mu.start_player()
     print(f"{CLR_P}Waiting for MuMu to start...{CLR_RST}")
-    # 用 ADB 就绪作为探测；等不齐自动重试启动实例一次，避免卡在“让你手动开”
     ready = False
-    for attempt in range(2):
+    for attempt in range(3):
         for _ in range(45):
             if mu.adb_connect():
                 ready = True
@@ -426,47 +412,43 @@ def run(cfg: Config):
             time.sleep(2)
         if ready:
             break
-        print(f"{CLR_P}MuMu not ready yet, retrying launch...{CLR_RST}")
-        mu.launch_instance()
+        print(f"{CLR_P}MuMu not ready, retrying launch...{CLR_RST}")
+        mu.start_player()
 
     if not ready:
         print(f"{CLR_A}Timed out waiting for MuMu{CLR_RST}")
-        print(f"{CLR_P}MuMu 仍未就绪。若 MuMu 窗口已打开但无响应，请手动重启后重试。{CLR_RST}")
         return
-
     print(f"{CLR_C}ADB connected: {mu.adb_addr}{CLR_RST}")
+
+    # 取已安装应用列表（识别跑步软件）
+    pkgs = mu.installed_pkgs()
 
     # 尝试注入步频传感器（通过 ADB 模拟传感器事件）
     inject_step_sensor = _try_inject_step_sensor(mu)
-    if inject_step_sensor:
-        print(f"{CLR_C}Step sensor injection channel available{CLR_RST}")
-    else:
-        print(f"{CLR_P}Step sensor injection unavailable (expected on most devices){CLR_RST}")
-
-    # 人脸抓拍提醒
-    if cfg.face_check:
-        print(f"{CLR_A}!! 人脸抓拍已开启 !!{CLR_RST}")
-        print(f"{CLR_P}确保虚拟摄像头(OBS)正显示你的注册人脸，否则本次无效{CLR_RST}")
-        if cfg.face_photo:
-            print(f"{CLR_C}人脸照片: {cfg.face_photo}{CLR_RST}")
 
     ui = UIController(mu.adb, mu.adb_addr)
 
-    # 取已安装应用列表（ADB 就绪后才有意义）
-    pkgs = mu.installed_pkgs()
+    # 先强制结束 App，确保从主页(开始乐跑)从头启动，而不是恢复上次残留页
+    if cfg.run_pkg:
+        mu.force_stop(cfg.run_pkg)
+        time.sleep(1.0)
 
-    # 启动跑步软件：优先按包名关键词识别“跑步类”App，找不到再回退微信小程序通道
-    run_pkg = _detect_run_app(pkgs)
-    if run_pkg:
-        mu.launch_app(run_pkg)
-        print(f"{CLR_C}Launched run app: {run_pkg}{CLR_RST}")
-        time.sleep(cfg.window_delay_sec)
-    elif any(p in pkgs for p in ["com.tencent.mm", "com.tencent.wework"]):
-        mu.launch_app("com.tencent.mm")
-        print(f"{CLR_P}No standalone run app found; using WeChat mini-program channel{CLR_RST}")
-        time.sleep(cfg.window_delay_sec)
-    else:
-        print(f"{CLR_A}No run app / WeChat found in installed packages{CLR_RST}")
+    # 启动跑步应用：优先独立步道乐跑 App（绕开微信风控），否则回退微信小程序
+    run_pkgs = [cfg.run_pkg, "com.tencent.mm", "com.tencent.wework"]
+    launched = False
+    for pkg in run_pkgs:
+        if pkg in pkgs:
+            if pkg == cfg.run_pkg:
+                # 用 launcher 活动启动（等价桌面点图标）→ 稳定落到主页(开始乐跑)
+                mu.adb_shell(f"am start -n {pkg}/.activities.splash.SplashActivity")
+            else:
+                mu.launch_app(pkg)
+            print(f"{CLR_C}Launched run app: {pkg}{CLR_RST}")
+            time.sleep(cfg.window_delay_sec)
+            launched = True
+            break
+    if not launched:
+        print(f"{CLR_A}No run app found in installed packages{CLR_RST}")
 
     # 自动点击进入跑步（开始乐跑 → 自由跑确认 → 等倒计时）
     _auto_start_run(ui, cfg)
@@ -552,115 +534,77 @@ def run(cfg: Config):
         print(tbl)
         print(f"  Steps: {step_count}  |  OU noise: ({dx:+.2f}, {dy:+.2f})m")
 
-        # 写入进度供 TUI 看板读取
-        try:
-            Path("run_status.json").write_text(json.dumps({
-                "elapsed": round(elapsed, 1),
-                "speed": round(speed, 2),
-                "total_dist": round(total_dist, 1),
-                "step_hz": round(step_hz, 2),
-                "frame": frame,
-                "step_count": step_count,
-                "noise": f"({dx:+.2f}, {dy:+.2f})",
-                "running": True,
-            }), encoding="utf-8")
-        except Exception:
-            pass
-
         if total_dist >= cfg.dist_limit_m:
             print(f"{CLR_A}Target distance reached.{CLR_RST}")
-            try:
-                Path("run_status.json").write_text(json.dumps({
-                    "running": False, "done": True,
-                    "total_dist": round(total_dist, 1),
-                    "elapsed": round(elapsed, 1),
-                }), encoding="utf-8")
-            except Exception:
-                pass
-            # 跑满后自动结束（长按暂停 → 结束 → 确认结束）
-            try:
-                _auto_finish_run(ui, cfg)
-            except Exception as e:
-                print(f"{CLR_A}[auto] finish error: {e}{CLR_RST}")
+            # 自动结束（长按暂停 → 结束 → 确认结束）
+            _auto_finish_run(ui, cfg)
             break
 
-
-# 步道乐跑 App 精确包名（在模拟器里查得：com.lptiyu.tanke，乐跑体育/版本4.2.6）
-_RUN_APP_PACKAGE = "com.lptiyu.tanke"
-# 兜底：仅当精确包名缺失时，才用这些明确“跑步”品牌关键词匹配
-_RUN_PKG_KEYWORDS = (
-    "lepao",      # 乐跑
-    "budao",      # 步道
-    "qinggong",   # 轻工(轻工大)
-    "schoolrun",  # 校园跑
-)
+    # 刷完关闭 MuMu
+    print(f"{CLR_P}Shutting down MuMu...{CLR_RST}")
+    mu.shutdown()
 
 
-def _detect_run_app(pkgs: set) -> Optional[str]:
-    """识别跑步软件：优先精确命中 com.lptiyu.tanke，否则按品牌关键词兜底。"""
-    if _RUN_APP_PACKAGE in pkgs:
-        return _RUN_APP_PACKAGE
-    for pkg in pkgs:
-        low = (pkg or "").lower()
-        if any(k in low for k in _RUN_PKG_KEYWORDS):
-            return pkg
-    return None
-
-
-def _click(ui, cfg, tpl, name, long_press=False):
-    """用图片识别（模板匹配）点击按钮；模板缺失/未识别时给出提示并返回 False。"""
-    ok = ui.click_icon(tpl, threshold=cfg.click_threshold, long_press=long_press)
-    print(f"[auto] {name}: {'found' if ok else 'not found (请用 option 9 采集按钮模板 img/' + tpl + ')'}")
-    return ok
+def _click_btn(ui: "UIController", cfg: Config, tpl: str, x: int, y: int, long_press: bool = False):
+    """图片识别优先(click_icon 模板匹配)；模板缺失/未命中则回退坐标。"""
+    if ui.click_icon(tpl, threshold=cfg.click_threshold, long_press=long_press):
+        print(f"[auto] {tpl}: image-match ok")
+        return True
+    print(f"[auto] {tpl}: template miss, fallback coords ({x},{y})")
+    if long_press:
+        ui.longpress(x, y)
+    else:
+        ui.tap(x, y)
+    return False
 
 
 def _auto_start_run(ui: "UIController", cfg: Config):
-    """自动点击进入跑步：主页「开始乐跑」→ 弹「自由跑」确认 → 等 3-2-1 倒计时。"""
+    """自动点击进入跑步：开始乐跑 → 自由跑确认 → 等 3-2-1 倒计时。（图片识别优先）"""
     if not cfg.auto_start_run:
         return
-    time.sleep(2)
-    _click(ui, cfg, cfg.tpl_begin, "开始乐跑")
-    time.sleep(1.5)
-    _click(ui, cfg, cfg.tpl_free, "自由跑确认")
-    time.sleep(4)
+    # 先把 App 退回到主页（启动可能恢复在上次的成绩/运行页；已在家则仅弹提示，不退出）
+    ui.back()
+    time.sleep(0.8)
+    _click_btn(ui, cfg, cfg.tpl_begin, cfg.begin_x, cfg.begin_y)
+    time.sleep(1.8)
+    _click_btn(ui, cfg, cfg.tpl_free, cfg.free_x, cfg.free_y)
+    time.sleep(6.0)  # 等 3-2-1 倒计时
     print(f"{CLR_C}[auto] run started{CLR_RST}")
 
 
 def _auto_finish_run(ui: "UIController", cfg: Config):
-    """跑到里程后自动结束：长按暂停 → 结束 → 确认结束。"""
+    """跑到里程后自动结束：长按暂停 → 结束 → 确认结束。（图片识别优先）"""
     if not cfg.auto_start_run:
         return
-    print(f"{CLR_C}[auto] finishing run...{CLR_RST}")
-    _click(ui, cfg, cfg.tpl_pause, "长按暂停", long_press=True)
-    time.sleep(1.5)
-    _click(ui, cfg, cfg.tpl_end, "结束")
-    time.sleep(1.5)
-    _click(ui, cfg, cfg.tpl_confirm_end, "确认结束")
+    print(f"{CLR_C}[auto] 结束流程...{CLR_RST}")
+    _click_btn(ui, cfg, cfg.tpl_pause, cfg.pause_x, cfg.pause_y, long_press=True)
+    time.sleep(1.8)
+    _click_btn(ui, cfg, cfg.tpl_end, cfg.end_x, cfg.end_y)
+    time.sleep(1.8)
+    _click_btn(ui, cfg, cfg.tpl_confirm_end, cfg.confirm_x, cfg.confirm_y)
+    # 结束后退回主页，让 App 停在主页（下次启动恢复在主页，自动点击可靠）
+    time.sleep(1.2)
+    ui.back()
+    ui.back()
 
 
 def _try_inject_step_sensor(mu: MuMuController) -> bool:
-    """检测是否具备可注入的步频通道：sensorservice 可达 + settings 可写回读。"""
+    """尝试建立步频传感器注入通道。返回是否成功。"""
     try:
-        # Android shell 用 grep 而非 Windows 的 findstr；空输出视为不可用
-        out = mu.adb_shell("dumpsys sensorservice 2>&1 | grep -i sensor")
-        if not (out and out.strip()):
-            return False
-        # 验证 settings 通道真正可写回读（注意：这仍不保证 APP 会读该 key）
-        test_val = int(time.time())
-        mu.adb_shell(f"settings put global step_counter {test_val}")
-        read = mu.adb_shell("settings get global step_counter")
-        return read is not None and read.strip() == str(test_val)
+        # 检查是否能访问 sensorservice
+        out = mu.adb_shell("dumpsys sensorservice 2>&1 | findstr /i sensor")
+        return out is not None
     except Exception:
         return False
 
 
 def _inject_step_count(mu: MuMuController, count: int):
-    """通过 ADB 写入步数到系统设置。大多数 APP 不读此 key，主要用于演示传感器缺口。"""
+    """通过 ADB 写入步数到系统设置（Google Fit 兼容）。"""
     mu.adb_shell(f"settings put global step_counter {count}")
 
 
 if __name__ == "__main__":
-    # 仅作脚本运行时才包装 stdio（被导入/测试时不劫持）
+    # 仅作脚本运行时包装 stdio（被导入/测试时不劫持）
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
     cfg = load_config()

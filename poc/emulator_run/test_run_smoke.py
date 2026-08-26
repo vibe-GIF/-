@@ -37,10 +37,17 @@ def test_run_launches_run_app(tmp_path, monkeypatch):
         def launch_instance(self):
             calls.append("launch_instance")
 
+        def force_stop(self, pkg):
+            calls.append(("force_stop", pkg))
+
+        def shutdown(self):
+            calls.append("shutdown")
+
         def set_location(self, lon, lat):
             calls.append(("set_location", lon, lat))
 
         def adb_shell(self, cmd):
+            calls.append(("adb_shell", cmd))
             return ""
 
     class FakeGPS:
@@ -74,8 +81,8 @@ def test_run_launches_run_app(tmp_path, monkeypatch):
     )
     main.run(cfg)
 
-    # 关键断言：启动链路走到了，且准确启动了步道乐跑
+    # 关键断言：启动链路走到了，且用 launcher 意图启动了步道乐跑
     assert "adb_connect" in calls
     assert "installed_pkgs" in calls
-    assert ("launch_app", "com.lptiyu.tanke") in calls
-    assert ("set_location", 114.4, 30.4) in calls or ("set_location", 114.4, 30.4) in calls
+    assert any(c[0] == "adb_shell" and "SplashActivity" in c[1] for c in calls)
+    assert ("set_location", 114.4, 30.4) in calls
